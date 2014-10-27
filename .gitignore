@@ -1,3 +1,9 @@
+#Project dependencies
+#
+combo-runner/
+MTBF-Driver/
+mtbf-env/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
