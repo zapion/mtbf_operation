@@ -4,7 +4,7 @@
 branch = v2.1
 mtbf-env = mtbf-env
 
-all: combo-runner mtbf-v2.1
+all: combo-runner mtbf-v2.1 virtual-env activate
 
 virtual-env:
 	virtualenv ${mtbf-env}
