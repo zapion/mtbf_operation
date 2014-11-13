@@ -10,7 +10,7 @@ virtual-env:
 	virtualenv ${mtbf-env}
 
 activate: mtbf-driver
-	. ${mtbf-env}/bin/activate; cd MTBF-Driver; \
+	@. ${mtbf-env}/bin/activate; cd MTBF-Driver; \
 	python setup.py install;
 
 mtbf-v2.1: mtbf-driver
