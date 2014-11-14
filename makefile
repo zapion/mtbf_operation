@@ -20,7 +20,7 @@ combo-runner:
 	@git clone https://github.com/Mozilla-TWQA/combo-runner.git;
 
 mtbf-driver:
-	@git clone https://github.com/Mozilla-TWQA/MTBF-Driver.git;
+	@git clone https://github.com/Mozilla-TWQA/MTBF_Driver.git;
 
 run:
 

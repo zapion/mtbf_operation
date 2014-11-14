@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import combo_runner.action_decorator
+from combo_runner import action_decorator
 from combo_runner.base_action_runner import BaseActionRunner
 from marionette import Marionette
 import mozdevice
@@ -53,3 +53,4 @@ class MtbfJobRunner(BaseActionRunner):
 
 if __name__ == '__main__':
     MtbfJobRunner().add_7mobile_action()
+    MtbfJobRunner().run()
