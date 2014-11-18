@@ -4,7 +4,7 @@
 branch = v2.1
 mtbf-env = mtbf-env
 
-all: combo-runner mtbf-v2.1 virtual-env activate
+all: mtbf-v2.1 combo-runner virtual-env activate
 
 virtual-env:
 	virtualenv ${mtbf-env}
@@ -17,12 +17,10 @@ mtbf-v2.1: mtbf-driver
 	@cd MTBF-Driver && git checkout v2.1;
 
 combo-runner:
-	@git clone https://github.com/Mozilla-TWQA/combo-runner.git;
+	git clone https://github.com/Mozilla-TWQA/combo-runner.git;
 
 mtbf-driver:
-	@git clone https://github.com/Mozilla-TWQA/MTBF-Driver.git;
-
-run:
+	git clone https://github.com/Mozilla-TWQA/MTBF-Driver.git;
 
 clean:
 	@rm -rf MTBF-Driver; rm -rf combo-runner; rm -rf ${mtbf-env}
