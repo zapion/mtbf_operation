@@ -5,7 +5,7 @@ from combo_runner.base_action_runner import BaseActionRunner
 from marionette import Marionette
 import mozdevice
 from gaiatest import GaiaData, GaiaApps, GaiaDevice
-
+from utils import zip_utils 
 
 class MtbfJobRunner(BaseActionRunner):
     
@@ -44,12 +44,18 @@ class MtbfJobRunner(BaseActionRunner):
                                     ]])
         return
 
+    @action
     def change_memory(self, memory=0):
         # make sure it's in fastboot mode, TODO: leverage all fastboot command in one task function
         mem_str = str(memory)
         if memory == 0:
             mem_str = "auto"
         #TODO: use adb/fastboot command to change memory?
+
+    @action
+    def collect_memory_report(self):
+        zip_utils.collect_about_memory("mtbf_driver") # TODO: give a correct path for about memory folder
+
 
 if __name__ == '__main__':
     MtbfJobRunner().add_7mobile_action()

@@ -18,3 +18,12 @@ def modify_zipfile(zip_path, handlers, new_path="./"):
                 for f in files:
                     f = os.path.join(root, f)
                     archive.write(f, os.path.relpath(f, new_path))
+
+def collect_about_memory(report_dir="mtbf_driver"):
+    memory_archive = "about-memory.zip"
+    os.path.exists(memory_archive) and os.remove(memory_archive)
+    with ZipFile(memory_archive, "w") as zipfile:
+        for root, dirs, files in os.walk(report_dir):
+            for f in files:
+                f = os.path.join(root, f)
+                zipfile.write(f, os.path.relpath(f, report_dir))
