@@ -4,7 +4,7 @@
 branch = v2.1
 mtbf-env = mtbf-env
 
-all: combo-runner mtbf-v2.1 virtual-env activate lib-install
+all: combo-runner mtbf-v2.1 virtual-env activate lib-install github-remove
 
 virtual-env:
 	@virtualenv ${mtbf-env}
@@ -17,9 +17,12 @@ lib-install: virtual-env
 activate: mtbf-driver virtual-env
 	@. ${mtbf-env}/bin/activate; \
 		cd MTBF-Driver; \
-	    python setup.py develop; \
+	    python setup.py install; \
 		cd ../combo-runner; \
-		python setup.py develop;
+		python setup.py install;
+
+github-remove:
+	@rm -rf MTBF-Driver combo-runner
 
 mtbf-v2.1: mtbf-driver
 	@cd MTBF-Driver && git checkout v2.1;

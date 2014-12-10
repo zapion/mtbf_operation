@@ -18,6 +18,7 @@ class MtbfJobRunner(BaseActionRunner):
         self.data_layer = GaiaData(self.marionette)
         self.device = GaiaDevice(self.marionette)
         self.dm = mozdevice.DeviceADB(deviceSerial, **kwargs)
+        BaseActionRunner.__init__()
 
     def pre_flash(self):
         pass
