@@ -5,7 +5,8 @@ from combo_runner.base_action_runner import BaseActionRunner
 from marionette import Marionette
 import mozdevice
 from gaiatest import GaiaData, GaiaApps, GaiaDevice
-from utils import zip_utils 
+from utils import zip_utils
+from utils import device_pool
 
 class MtbfJobRunner(BaseActionRunner):
     
@@ -57,7 +58,15 @@ class MtbfJobRunner(BaseActionRunner):
     def collect_memory_report(self):
         zip_utils.collect_about_memory("mtbf_driver") # TODO: give a correct path for about memory folder
 
+    @action
+    def get_free_device(self):
+        dp = DevicePool()
+        if dp.get_lock():
+            # Record device serial and store dp instance
+            self.serial = str(dp)
+            self.dp = dp
+
 
 if __name__ == '__main__':
-    MtbfJobRunner().add_7mobile_action()
+    MtbfJobRunner().()
     MtbfJobRunner().run()
