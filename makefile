@@ -4,6 +4,11 @@
 branch = v2.1
 mtbf-env = mtbf-env
 
+setup-combo: combo-runner virtual-env activate
+
+delete-mtbf-env:
+	@rm -rf mtbf-env
+
 all: combo-runner mtbf-v2.1 virtual-env activate lib-install github-remove
 
 virtual-env:

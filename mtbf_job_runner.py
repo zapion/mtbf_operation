@@ -6,20 +6,24 @@ from marionette import Marionette
 import mozdevice
 from gaiatest import GaiaData, GaiaApps, GaiaDevice
 from utils import zip_utils
-from utils import device_pool
+from utils.device_pool import DevicePool
 
-class MtbfJobRunner(BaseActionRunner):
+action = action_decorator.action
+
+class MtbfJobRunner(BaseActionRunner):    
     
-    action = combo_runner.action_decorator.action
-    
-    def __init__(self, deviceSerial, **kwargs):
-        self.marionette = Marionette()
-        self.marionette.start_session()
-        self.apps = GaiaApps(self.marionette)
-        self.data_layer = GaiaData(self.marionette)
-        self.device = GaiaDevice(self.marionette)
-        self.dm = mozdevice.DeviceADB(deviceSerial, **kwargs)
-        BaseActionRunner.__init__()
+    def __init__(self, deviceSerial=None, **kwargs):
+        deviceSerial and self.setup(deviceSerial)
+        BaseActionRunner.__init__(self)
+
+    def setup(self, deviceSerial):
+        if not self.marionette:
+            self.dm = mozdevice.DeviceADB(deviceSerial, **kwargs)
+            self.marionette = Marionette()
+            self.marionette.start_session()
+            self.apps = GaiaApps(self.marionette)
+            self.data_layer = GaiaData(self.marionette)
+            self.device = GaiaDevice(self.marionette)
 
     def pre_flash(self):
         pass
@@ -47,7 +51,7 @@ class MtbfJobRunner(BaseActionRunner):
         return
 
     @action
-    def change_memory(self, memory=0):
+    def change_memory(self, memory=0, action=False):
         # make sure it's in fastboot mode, TODO: leverage all fastboot command in one task function
         mem_str = str(memory)
         if memory == 0:
@@ -55,11 +59,11 @@ class MtbfJobRunner(BaseActionRunner):
         #TODO: use adb/fastboot command to change memory?
 
     @action
-    def collect_memory_report(self):
+    def collect_memory_report(self, action=True):
         zip_utils.collect_about_memory("mtbf_driver") # TODO: give a correct path for about memory folder
 
     @action
-    def get_free_device(self):
+    def get_free_device(self, action=True):
         dp = DevicePool()
         if dp.get_lock():
             # Record device serial and store dp instance
@@ -68,5 +72,6 @@ class MtbfJobRunner(BaseActionRunner):
 
 
 if __name__ == '__main__':
-    MtbfJobRunner().()
-    MtbfJobRunner().run()
+    mjr = MtbfJobRunner()
+    mjr.get_free_device()
+    mjr.dp.release()
