@@ -5,9 +5,6 @@ branch = v2.1
 mtbf-env = mtbf-env
 virtual-env-exists = $(shell if [ -d "mtbf-env" ]; then echo "exists"; fi)
 
-test:
-	echo ${virtual-env-exists}
-
 setup-combo: combo-runner virtual-env activate
 
 delete-mtbf-env:
@@ -18,6 +15,8 @@ all: combo-runner mtbf-v2.1 virtual-env activate lib-install github-remove
 virtual-env:
 ifneq ($(virtual-env-exists),exists)
 	@virtualenv ${mtbf-env}
+else
+	@echo "virtual environment exists." 
 endif
 
 lib-install: virtual-env
