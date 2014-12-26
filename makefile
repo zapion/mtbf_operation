@@ -52,5 +52,11 @@ update:
      cd ../combo-runner; \
      git pull -u;
 
+b2g-flash-tool:
+	git clone https://github.com/Mozilla-TWQA/B2G-flash-tool.git; \
+		mkdir flash_tool; \
+		cp -rf B2G-flash-tool/* flash_tool; \
+		touch flash_tool/__init__.py
+
 clean:
-	@rm -rf MTBF-Driver; rm -rf combo-runner; rm -rf ${mtbf-env}
+	@rm -rf MTBF-Driver; rm -rf combo-runner; rm -rf B2G-flash-tool; rm -rf ${mtbf-env}
