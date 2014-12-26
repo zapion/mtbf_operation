@@ -1,7 +1,6 @@
 # Pull all dependencies for mtbf runner
 #
 
-branch = v2.1
 mtbf-env = mtbf-env
 virtual-env-exists = $(shell if [ -d "mtbf-env" ]; then echo "exists"; fi)
 
@@ -10,7 +9,9 @@ setup-combo: combo-runner virtual-env activate
 delete-mtbf-env:
 	@rm -rf mtbf-env
 
-all: combo-runner mtbf-v2.1 virtual-env activate lib-install github-remove
+v2.1: combo-runner mtbf-v2.1 virtual-env activate lib-install github-remove
+
+vmaster: combo-runner mtbf-vmaster virtual-env activate lib-install github-remove
 
 virtual-env:
 ifneq ($(virtual-env-exists),exists)
@@ -32,6 +33,9 @@ activate: mtbf-driver virtual-env
 
 github-remove:
 	@rm -rf MTBF-Driver combo-runner
+
+mtbf-vmaster: mtbf-driver
+	@cd MTBF-Driver && git checkout master;
 
 mtbf-v2.1: mtbf-driver
 	@cd MTBF-Driver && git checkout v2.1;
