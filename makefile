@@ -13,6 +13,8 @@ v2.1: combo-runner mtbf-v2.1 virtual-env activate lib-install github-remove
 
 vmaster: combo-runner mtbf-vmaster virtual-env activate lib-install github-remove
 
+downloader: b2g-flash-tool
+
 virtual-env:
 ifneq ($(virtual-env-exists),exists)
 	@virtualenv ${mtbf-env}
@@ -41,7 +43,7 @@ mtbf-v2.1: mtbf-driver
 	@cd MTBF-Driver && git checkout v2.1;
 
 combo-runner:
-	@git clone https://github.com/Mozilla-TWQA/combo-runner.git;
+	@git clone https://github.com/zapion/combo-runner.git;
 
 mtbf-driver:
 	@git clone https://github.com/Mozilla-TWQA/MTBF-Driver.git;
@@ -53,10 +55,9 @@ update:
      git pull -u;
 
 b2g-flash-tool:
-	git clone https://github.com/Mozilla-TWQA/B2G-flash-tool.git; \
-		mkdir flash_tool; \
-		cp -rf B2G-flash-tool/* flash_tool; \
-		touch flash_tool/__init__.py
+	git clone https://github.com/zapion/B2G-flash-tool.git; \
+		mv B2G-flash-tool flash_tool; \
+		cp b2g_download.py flash_tool;
 
 clean:
-	@rm -rf MTBF-Driver; rm -rf combo-runner; rm -rf B2G-flash-tool; rm -rf ${mtbf-env}
+	@rm -rf MTBF-Driver; rm -rf combo-runner; rm -rf B2G-flash-tool; rm -rf flash_tool; rm -rf ${mtbf-env}

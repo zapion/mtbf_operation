@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import subprocess
 from combo_runner import action_decorator
 from combo_runner.base_action_runner import BaseActionRunner
 from marionette import Marionette
@@ -9,11 +10,18 @@ from gaiatest import GaiaData, GaiaApps, GaiaDevice
 from utils import zip_utils
 from utils.device_pool import DevicePool
 
+
 action = action_decorator.action
 
 
+
 class MtbfJobRunner(BaseActionRunner):
-    
+    flash_params = {
+            'device': '',
+            'branch': 'mozilla-b2g34_v2_1-flame-kk-eng',
+            'build': '',
+            'build_id': ''
+            }
     BRANCH_V210_KK = 'mozilla-b2g34_v2_1-flame-kk-eng'
     GECKO_B2G34 = 'b2g-34.0.en-US.android-arm.tar.gz'
     SYMBOLS_B2G34 = 'b2g-34.0.en-US.android-arm.crashreporter-symbols.zip'
@@ -23,11 +31,9 @@ class MtbfJobRunner(BaseActionRunner):
         BaseActionRunner.__init__(self)
 
     def setup(self, deviceSerial):
+        # TODO: Adding setting flash params function
+        
         if not hasattr(self, 'marionette') or not self.marionette:
-            os.environ['BRANCH'] = self.BRANCH_V210_KK
-            os.environ['GECKO'] = self.GECKO_B2G34
-            os.environ['SYMBOLS'] = self.SYMBOLS_B2G34
-            os.environ['GAIA'] = 'gaia.zip'
             self.deviceSerial = deviceSerial
             self.dm = mozdevice.DeviceManagerADB(deviceSerial)
             self.marionette = Marionette()
@@ -35,6 +41,12 @@ class MtbfJobRunner(BaseActionRunner):
             self.apps = GaiaApps(self.marionette)
             self.data_layer = GaiaData(self.marionette)
             self.device = GaiaDevice(self.marionette)
+
+    def adb_test(self):
+        if not hasattr(self, 'serial') or os.system("adb -s " + self.serial + " shell ls") != 0:
+            print("Device not found or can't be controlled")
+            return False
+        return True
 
     @action
     def download_pvt_b2g(self, action=False):
@@ -61,12 +73,15 @@ class MtbfJobRunner(BaseActionRunner):
 
     @action
     def change_memory(self, memory=0, action=False):
-        # make sure it's in fastboot mode, TODO: leverage all fastboot command in one task function
+        #TODO: use native adb/fastboot command to change memory?
+        # Make sure it's in fastboot mode, TODO: leverage all fastboot command in one task function
+        if self.adb_test():
+            os.system("adb reboot boot-loader")
         mem_str = str(memory)
-        if memory == 0:
-            mem_str = "auto"
         os.system("fastboot setvar mem " + mem_str)
-        #TODO: use adb/fastboot command to change memory?
+        # Preventing from async timing of fastboot
+        time.sleep(5)
+        os.system("fastboot reboot")
 
     @action
     def collect_memory_report(self, action=True):
@@ -79,9 +94,9 @@ class MtbfJobRunner(BaseActionRunner):
             self.serial = str(dp)
             self.dp = dp
             os.environ["ANDROID_SERIAL"] = self.serial
-            self.setup(self.serial)
             port = self.find_available_port()
             if self.port_forwarding(str(dp), port):
+                self.setup(self.serial)
                 return dp
             print "Port forwarding failed"
             return None
@@ -89,18 +104,30 @@ class MtbfJobRunner(BaseActionRunner):
         # TODO: more handling for no available device
 
     @action
-    def full_flash(self, action=False, device='flame-kk', branch='mozilla-central', build_type='Engineer', build_id=''):
+    def full_flash(self, action=False, flash_args=[]):
+        if not flash_args:
+            pass
         pass
 
     @action
-    def shallow_flash(self, action=True, device='flame-kk', branch='mozilla-central', build_type='Engineer', build_id=''):
-        pass
+    def shallow_flash(self, action=True, flash_args=[]):
+        if not flash_args:
+            pass
 
     def port_forwarding(self, serial, port):
+        out = subprocess.check_output(['/usr/bin/adb version'], shell=True)
+        import re
+        search = re.search('[0-9\.]+', out)
+        if search and search.group(0) >= '1.0.31':
+            out = subprocess.check_output('/usr/bin/adb forward --list', shell=True)
+            if re.search('\w+', out).group(0) == serial:
+                # Use existing forwarded connection
+                re.search(' tcp:(\d+) ', out).group(1)
+                return True
         if serial and port:
-            os.system("adb -s " + serial + " forward tcp:" + port + " tcp:2828")
+            os.system("adb -s " + serial + " forward tcp:" + str(port) + " tcp:2828")
 
-    def find_avaiable_port(self):
+    def find_available_port(self):
         if 'ANDROID_SERIAL' in os.environ.keys():
             import socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -123,6 +150,9 @@ class MtbfJobRunner(BaseActionRunner):
         else:
             print "No device allocated"
             return False
+    def check_version(self):
+        # TODO: fix check version to use package import
+        os.system("cd flash_tool/ && NO_COLOR=TRUE ./check_versions.py && cd ..")
 
     def execute(self):
         # run test runner here
@@ -137,7 +167,7 @@ class MtbfJobRunner(BaseActionRunner):
 
     def post_flash(self):
         self.add_7mobile_action()
-        #self.enable_certified_apps_debug()
+        self.enable_certified_apps_debug()
 
     def run(self):
         try:
@@ -151,4 +181,5 @@ class MtbfJobRunner(BaseActionRunner):
 
 if __name__ == '__main__':
     mjr = MtbfJobRunner()
+    #mjr.check_version()
     mjr.run()

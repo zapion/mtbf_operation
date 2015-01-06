@@ -3,6 +3,7 @@
 combo-runner/
 MTBF-Driver/
 mtbf-env/
+*flash*tool/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
