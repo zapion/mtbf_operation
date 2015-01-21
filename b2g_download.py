@@ -85,7 +85,7 @@ class PvtDownloader(ConsoleApp):
         self.flash_params.append(PathParser._GECKO)
 
         # download
-        self.logger.log(self.do_download(self.flash_params))
+        self.do_download(self.flash_params)
 
 if __name__ == '__main__':
     pvtd = PvtDownloader()

@@ -9,9 +9,11 @@ setup-combo: combo-runner virtual-env activate
 delete-mtbf-env:
 	@rm -rf mtbf-env
 
-v2.1: combo-runner mtbf-v2.1 virtual-env activate lib-install github-remove
+utils: combo-runner virtual-env activate lib-install github-remove b2g-flash-tool
 
-vmaster: combo-runner mtbf-vmaster virtual-env activate lib-install github-remove
+v2.1: mtbf-v2.1 utils
+
+vmaster: mtbf-vmaster utils
 
 downloader: b2g-flash-tool
 
