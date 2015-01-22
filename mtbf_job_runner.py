@@ -53,7 +53,7 @@ class MtbfJobRunner(BaseActionRunner):
             self.device = GaiaDevice(self.marionette)
 
     def adb_test(self):
-        if not serial or os.system("ANDROID_SERIAL=" self.serial + " adb shell ls") != 0:
+        if hasattr(self, 'serial') or os.system("ANDROID_SERIAL=" + self.serial + " adb shell ls") != 0:
             logger.error("Device not found or can't be controlled")
             return False
         return True
@@ -115,7 +115,13 @@ class MtbfJobRunner(BaseActionRunner):
         ## TODO: if latest/ exists, use latest as default
             raise AttributeError("No FLASH_BUILDID set")
         buildid = os.environ['FLASH_BUILDID']
-        flash_dir = os.path.join(basedir, buildid)
+        # re-format build id based on pvt folder structure
+        if '-' in buildid:
+            buildid = buildid.replace("-", "")
+        year = buildid[:4]
+        month = buildid[4:6]
+        datetime = '-'.join([year, month] + [buildid[i + 6:i + 8] for i in range(0, len(buildid[6:]), 2)])
+        flash_dir = os.path.join(basedir, year, month, datetime)
         if not os.path.isdir(flash_dir):
             raise AttributeError("Flash  directory " + flash_dir + " not exist")
         flash_files = glob.glob(os.path.join(flash_dir, '*'))
@@ -193,9 +199,9 @@ class MtbfJobRunner(BaseActionRunner):
                 self.port = int(re.search(' tcp:(\d+) ', out).group(1))
                 return True
         if serial and port:
-            ret = os.system("ANDROID_SERIAL=" + serial + "adb forward tcp:" + str(port) + " tcp:2828")
+            ret = os.system("ANDROID_SERIAL=" + serial + " adb forward tcp:" + str(port) + " tcp:2828")
             if ret != 0:
-                raise DMError
+                raise DMError("can't forward port to ANDROID_SERIAL[" + serial + "]")
         return True
 
     def find_available_port(self):
@@ -229,26 +235,22 @@ class MtbfJobRunner(BaseActionRunner):
             cmd = "ANDROID_SERIAL=" + self.serial + " " + cmd
         os.system(cmd)
 
-    def mtbf_setup(self):
+    def mtbf_parse_options(self):
         ## load mtbf parameters
-        ## mtbf_time (x, system variable) verify if it is set
         if not 'MTBF_TIME' in os.environ:
             logger.warning("MTBF_TIME is not set")
-        ## mtbf_conf (x, system variable)
         if not 'MTBF_CONF' in os.environ:
             logger.warning("MTBF_CONF is not set")
 
-        ## address (x, allocated in previous task)
-        ## testvar.json (o)
-        parser = self.parser.parser
-        #TODO: finish parsing arguments for flashing
-        parser.add_argument("--flashdir", help="directory for pulling build")
-        parser.add_argument("--buildid", help="build id for pulling build")
-        self.parse_options()
-        if hasattr(self.option, flashdir):
-            os.environ['FLASH_BASEDIR'] = self.option.flashdir
-        if hasattr(self.option, buildid):
-            os.environ['FLASH_BUILDID'] = self.option.buildid
+        ## parser = self.parser.parser
+        ## #TODO: finish parsing arguments for flashing
+        ## parser.add_argument("--flashdir", help="directory for pulling build")
+        ## parser.add_argument("--buildid", help="build id for pulling build")
+        ## self.parse_options()
+        ## if hasattr(self.parser.option, 'flashdir'):
+        ##     os.environ['FLASH_BASEDIR'] = self.parser.option.flashdir
+        ## if hasattr(self.parser.option, 'buildid'):
+        ##     os.environ['FLASH_BUILDID'] = self.parser.option.buildid
 
     def execute(self):
         # run test runner here
@@ -264,6 +266,9 @@ class MtbfJobRunner(BaseActionRunner):
         flash_args = self.validate_flash_params()
         self.shallow_flash(flash_src=flash_args)
         self.full_flash(flash_src=flash_args)
+        # workaround for waiting for boot
+        import time
+        time.sleep(5)
 
     def post_flash(self):
         self.setup()
@@ -275,12 +280,13 @@ class MtbfJobRunner(BaseActionRunner):
         pass
 
     def run(self):
+        self.mtbf_parse_options()
         try:
             if self.get_free_device():
                 self.pre_flash()
                 self.flash()
+                self.port_forwarding(self.serial, self.port)
                 self.post_flash()
-                self.mtbf_setup()
                 self.execute()
                 self.collect_report()
         finally:
