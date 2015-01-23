@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import time
 import logging
 import subprocess
@@ -29,6 +30,7 @@ action = action_decorator.action
 
 class MtbfJobRunner(BaseActionRunner):
     serial = None
+    marionette =None
     flash_params = {
         'branch': 'mozilla-b2g34_v2_1-flame-kk-eng',
         'build': '',
@@ -44,13 +46,15 @@ class MtbfJobRunner(BaseActionRunner):
         if not self.serial or not self.port:
             logger.error("Fail to get device")
             raise DMError
-        if not 'marionette' in self.__dict__ or not self.marionette:
+        if not self.marionette:
             self.dm = mozdevice.DeviceManagerADB(deviceSerial=self.serial, port=self.port)
             self.marionette = Marionette(device_serial=self.serial, port=self.port)
-            self.marionette.start_session()
+            if not self.marionette.session:
+                self.marionette.start_session()
+            self.device = GaiaDevice(marionette=self.marionette, manager=self.dm)
+            self.device.restart_b2g()
             self.apps = GaiaApps(self.marionette)
             self.data_layer = GaiaData(self.marionette)
-            self.device = GaiaDevice(self.marionette)
 
     def adb_test(self):
         if hasattr(self, 'serial') or os.system("ANDROID_SERIAL=" + self.serial + " adb shell ls") != 0:
@@ -60,6 +64,7 @@ class MtbfJobRunner(BaseActionRunner):
 
     @action(enabled=True)
     def add_7mobile_action(self):
+        # workaround for waiting for boot
         self.data_layer.set_setting('ril.data.apnSettings',
                                     [[
                                         {"carrier": "(7-Mobile) (MMS)",
@@ -197,11 +202,13 @@ class MtbfJobRunner(BaseActionRunner):
             if search_serial and search_serial.group(0) == serial:
                 # Use existing forwarded connection
                 self.port = int(re.search(' tcp:(\d+) ', out).group(1))
+                logger.info("Using existing port [" + str(self.port) + "]")
                 return True
         if serial and port:
             ret = os.system("ANDROID_SERIAL=" + serial + " adb forward tcp:" + str(port) + " tcp:2828")
             if ret != 0:
                 raise DMError("can't forward port to ANDROID_SERIAL[" + serial + "]")
+        logger.info("Port forwarding success serial:[" + serial + "] port:[" + str(port) + "]")
         return True
 
     def find_available_port(self):
@@ -252,12 +259,24 @@ class MtbfJobRunner(BaseActionRunner):
         ## if hasattr(self.parser.option, 'buildid'):
         ##     os.environ['FLASH_BUILDID'] = self.parser.option.buildid
 
+    def remove_settings_opt(self):
+        for e in sys.argv[1:]:
+            if '--settings' in e:
+                idx = sys.argv.index(e)
+                sys.argv.remove(e)
+                if len(sys.argv) > idx and not '--' in sys.argv[idx]:
+                    sys.argv.remove(idx)
+                break
+
     def execute(self):
         # run test runner here
-        args = {}
+        self.remove_settings_opt()
+        kwargs = {}
         if self.port:
-            args['address'] = "localhost:" + str(self.port)
-        mtbf.main(**args)
+            kwargs['address'] = "localhost:" + str(self.port)
+        logger.info("Using address[localhost:" + str(self.port) + "]")
+        self.marionette and self.marionette.session and self.marionette.delete_session()
+        mtbf.main(marionette=self.marionette, **kwargs)
 
     def pre_flash(self):
         pass
@@ -267,8 +286,6 @@ class MtbfJobRunner(BaseActionRunner):
         self.shallow_flash(flash_src=flash_args)
         self.full_flash(flash_src=flash_args)
         # workaround for waiting for boot
-        import time
-        time.sleep(5)
 
     def post_flash(self):
         self.setup()
