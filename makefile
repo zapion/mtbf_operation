@@ -24,6 +24,15 @@ else
 	@echo "virtual environment exists." 
 endif
 
+custom-gaia:
+ifdef gaiatest
+	. ${mtbf-env}/bin/activate; \
+		cd ${gaiatest}; \
+		python setup.py install;
+else
+	echo ${gaiatest} is wrong
+endif
+
 lib-install: virtual-env
 	@. ${mtbf-env}/bin/activate; \
 		pip install lockfile;

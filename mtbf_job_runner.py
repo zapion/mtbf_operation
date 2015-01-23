@@ -62,6 +62,12 @@ class MtbfJobRunner(BaseActionRunner):
             return False
         return True
 
+    @action(enabled=False)
+    def custom_gaia(self):
+        # TODO: Complete the function
+        # check if gaia version and marionette/gaiatest match
+        pass
+
     @action(enabled=True)
     def add_7mobile_action(self):
         # workaround for waiting for boot
