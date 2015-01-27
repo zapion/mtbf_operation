@@ -13,7 +13,7 @@ utils: combo-runner virtual-env activate lib-install github-remove b2g-flash-too
 
 v2.1: mtbf-v2.1 utils
 
-vmaster: mtbf-vmaster utils
+vmaster: mtbf-vmaster utils custom-gaia
 
 downloader: b2g-flash-tool
 
@@ -30,7 +30,7 @@ ifdef gaiatest
 		cd ${gaiatest}; \
 		python setup.py install;
 else
-	echo ${gaiatest} is wrong
+	echo use default gaiatest
 endif
 
 lib-install: virtual-env

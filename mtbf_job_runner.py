@@ -16,21 +16,25 @@ from marionette import Marionette
 import mozdevice
 from mozdevice.devicemanager import DMError
 from gaiatest import GaiaData, GaiaApps, GaiaDevice
+from gaiatest.runtests import GaiaTestOptions
 from utils import zip_utils
 from utils.device_pool import DevicePool
 from flash_tool.utilities.decompressor import Decompressor
 from flash_tool.utilities.logger import Logger
 from mtbf_driver import mtbf
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("mtbf_operation")
 logging.basicConfig(level=logging.DEBUG)
 
 action = action_decorator.action
 
+class MtbfTestOptions(GaiaTestOptions):
+    def __init__(self):
+        GaiaTestOptions.__init__(self)
 
 class MtbfJobRunner(BaseActionRunner):
     serial = None
-    marionette =None
+    marionette = None
     flash_params = {
         'branch': 'mozilla-b2g34_v2_1-flame-kk-eng',
         'build': '',
@@ -57,16 +61,10 @@ class MtbfJobRunner(BaseActionRunner):
             self.data_layer = GaiaData(self.marionette)
 
     def adb_test(self):
-        if hasattr(self, 'serial') or os.system("ANDROID_SERIAL=" + self.serial + " adb shell ls") != 0:
+        if not hasattr(self, 'serial') or os.system("ANDROID_SERIAL=" + self.serial + " adb shell ls") != 0:
             logger.error("Device not found or can't be controlled")
             return False
         return True
-
-    @action(enabled=False)
-    def custom_gaia(self):
-        # TODO: Complete the function
-        # check if gaia version and marionette/gaiatest match
-        pass
 
     @action(enabled=True)
     def add_7mobile_action(self):
@@ -86,16 +84,23 @@ class MtbfJobRunner(BaseActionRunner):
         return True
 
     @action(enabled=False)
-    def change_memory(self, memory=0):
+    def change_memory(self):
         #TODO: use native adb/fastboot command to change memory?
         # Make sure it's in fastboot mode, TODO: leverage all fastboot command in one task function
         if self.adb_test():
-            os.system("adb reboot boot-loader")
-        mem_str = str(memory)
-        os.system("fastboot setvar mem " + mem_str)
-        # Preventing from async timing of fastboot
-        time.sleep(5)
-        os.system("fastboot reboot")
+            os.system("adb reboot bootloader")
+            memory = 319
+            mem_str = str(memory)
+            os.system("fastboot oem mem " + mem_str)
+            # Preventing from async timing of fastboot
+            time.sleep(5)
+            os.system("fastboot reboot")
+            self.port_forwarding(self.serial, self.port)
+            return True
+        logger.error("Can't find device")
+        self.marionette.wait_for_port()
+        self.port_forwarding(self.serial, self.port)
+        return False
 
     @action(enabled=True)
     def collect_memory_report(self):
@@ -148,7 +153,7 @@ class MtbfJobRunner(BaseActionRunner):
                 flash_src['image'] = flash_file
         return flash_src
 
-    @action(enabled=False)
+    @action(enabled=True)
     def full_flash(self, flash_src=[]):
         if self.flashed:
             logger.warning("Flash performed; skip flashing")
@@ -170,7 +175,7 @@ class MtbfJobRunner(BaseActionRunner):
             # support NO_FTU environment for skipping FTU (e.g. monkey test)
             if 'NO_FTU' in os.environ and os.environ['NO_FTU'] == 'true':
                 logger.log('The [NO_FTU] is [true].')
-                os.system('adb wait-for-device && adb shell stop b2g; (RET=$(adb root); if ! case ${RET} in *"cannot"*) true;; *) false;; esac; then adb remount && sleep 5; else exit 1; fi; ./disable_ftu.py) || (echo "No root permission, cannot setup NO_FTU."); adb reboot;')
+                os.system("ANDROID_SERIAL=" + self.serial + 'adb wait-for-device && adb shell stop b2g; (RET=$(adb root); if ! case ${RET} in *"cannot"*) true;; *) false;; esac; then adb remount && sleep 5; else exit 1; fi; ./disable_ftu.py) || (echo "No root permission, cannot setup NO_FTU."); adb reboot;')
         finally:
             try:
                 shutil.rmtree(self.temp_dir)  # delete directory
@@ -178,7 +183,7 @@ class MtbfJobRunner(BaseActionRunner):
                 logger.error('Can not remove temporary folder:' + self.temp_dir, level=Logger._LEVEL_WARNING)
         self.flashed = True
 
-    @action(enabled=True)
+    @action(enabled=False)
     def shallow_flash(self, flash_src=[]):
         if self.flashed:
             logger.warning("Flash performed; skip flashing")
@@ -197,11 +202,14 @@ class MtbfJobRunner(BaseActionRunner):
             logger.info("Shallow flash ended abnormally")
             return False
         self.flashed = True
+        os.system("ANDROID_SERIAL=" + self.serial + " adb wait-for-device")
+
 
     def port_forwarding(self, serial, port):
         out = subprocess.check_output(['/usr/bin/adb version'], shell=True)
         import re
         search = re.search('[0-9\.]+', out)
+        os.system("ANDROID_SERIAL=" + self.serial + " adb wait-for-device")
         if search and search.group(0) >= '1.0.31':
             out = subprocess.check_output('/usr/bin/adb forward --list', shell=True)
             search_serial = re.search('\w+', out)
@@ -229,7 +237,7 @@ class MtbfJobRunner(BaseActionRunner):
     @action(enabled=True)
     def enable_certified_apps_debug(self):
         if self.serial:
-            os.system("flash_tool/enable_certified_apps_for_devtools.sh")
+            os.system("ANDROID_SERIAL=" + self.serial + "flash_tool/enable_certified_apps_for_devtools.sh && adb wait-for-device")
             return True
         return False
 
@@ -243,19 +251,32 @@ class MtbfJobRunner(BaseActionRunner):
 
     def check_version(self):
         # FIXME: fix check version to use package import
-        cmd = "cd flash_tool/ && NO_COLOR=TRUE ./check_versions.py | sed 's|[ \t]\{2,\}||g'"
+        cmd = "cd flash_tool/ && NO_COLOR=TRUE ./check_versions.py | sed -e 's| \{2,\}||g' -e 's|\[0m||g'"
         if self.serial:
             cmd = "ANDROID_SERIAL=" + self.serial + " " + cmd
         os.system(cmd)
 
-    def mtbf_parse_options(self):
+    def mtbf_options(self):
         ## load mtbf parameters
         if not 'MTBF_TIME' in os.environ:
             logger.warning("MTBF_TIME is not set")
         if not 'MTBF_CONF' in os.environ:
             logger.warning("MTBF_CONF is not set")
 
-        ## parser = self.parser.parser
+        parser = self.parser.parser
+        parser.add_argument("--testvars", help="Test variables for b2g")
+        self.parse_options()
+        # FIXME: make rootdir of testvars could be customized
+        mtbf_testvars_dir = "/mnt/mtbf_shared/testvars"
+        if not hasattr(self.options, 'testvars') or not self.options.testvars:
+            testvars = os.path.join(mtbf_testvars_dir, "testvars_" + self.serial + ".json")
+            logger.info("testvar is [" + testvars + "]")
+            if os.path.exists(testvars):
+                self.options.testvars = parser.testvars = testvars
+                logger.info("testvar [" + testvars + "] found")
+            else:
+                raise AttributeError("testvars[" + testvars + "] doesn't exist")
+
         ## #TODO: finish parsing arguments for flashing
         ## parser.add_argument("--flashdir", help="directory for pulling build")
         ## parser.add_argument("--buildid", help="build id for pulling build")
@@ -271,17 +292,19 @@ class MtbfJobRunner(BaseActionRunner):
                 idx = sys.argv.index(e)
                 sys.argv.remove(e)
                 if len(sys.argv) > idx and not '--' in sys.argv[idx]:
-                    sys.argv.remove(idx)
+                    del sys.argv[idx]
                 break
 
     def execute(self):
+        self.marionette.cleanup()
+        self.marionette = Marionette(device_serial=self.serial, port=self.port)
+        self.marionette.wait_for_port()
         # run test runner here
         self.remove_settings_opt()
         kwargs = {}
         if self.port:
             kwargs['address'] = "localhost:" + str(self.port)
         logger.info("Using address[localhost:" + str(self.port) + "]")
-        self.marionette and self.marionette.session and self.marionette.delete_session()
         mtbf.main(marionette=self.marionette, **kwargs)
 
     def pre_flash(self):
@@ -295,17 +318,18 @@ class MtbfJobRunner(BaseActionRunner):
 
     def post_flash(self):
         self.setup()
+        self.check_version()
+        self.change_memory()
         self.add_7mobile_action()
         self.enable_certified_apps_debug()
-        self.check_version()
 
     def collect_report(self):
         pass
 
     def run(self):
-        self.mtbf_parse_options()
         try:
             if self.get_free_device():
+                self.mtbf_options()
                 self.pre_flash()
                 self.flash()
                 self.port_forwarding(self.serial, self.port)
