@@ -50,15 +50,14 @@ class MtbfJobRunner(BaseActionRunner):
         if not self.serial or not self.port:
             logger.error("Fail to get device")
             raise DMError
-        if not self.marionette:
-            self.dm = mozdevice.DeviceManagerADB(deviceSerial=self.serial, port=self.port)
-            self.marionette = Marionette(device_serial=self.serial, port=self.port)
-            if not self.marionette.session:
-                self.marionette.start_session()
-            self.device = GaiaDevice(marionette=self.marionette, manager=self.dm)
-            self.device.restart_b2g()
-            self.apps = GaiaApps(self.marionette)
-            self.data_layer = GaiaData(self.marionette)
+        self.marionette and self.marionette.session and self.marionette.cleanup()
+        self.dm = mozdevice.DeviceManagerADB(deviceSerial=self.serial, port=self.port)
+        self.marionette = Marionette(device_serial=self.serial, port=self.port)
+        self.marionette.start_session()
+        self.device = GaiaDevice(marionette=self.marionette, manager=self.dm)
+        self.device.restart_b2g()
+        self.apps = GaiaApps(self.marionette)
+        self.data_layer = GaiaData(self.marionette)
 
     def adb_test(self):
         if not hasattr(self, 'serial') or os.system("ANDROID_SERIAL=" + self.serial + " adb shell ls") != 0:
@@ -305,7 +304,7 @@ class MtbfJobRunner(BaseActionRunner):
         if self.port:
             kwargs['address'] = "localhost:" + str(self.port)
         logger.info("Using address[localhost:" + str(self.port) + "]")
-        mtbf.main(marionette=self.marionette, **kwargs)
+        mtbf.main(marionette=self.marionette, testvars=self.options.testvars,**kwargs)
 
     def pre_flash(self):
         pass
