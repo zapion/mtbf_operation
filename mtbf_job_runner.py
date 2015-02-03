@@ -28,9 +28,11 @@ logging.basicConfig(level=logging.DEBUG)
 
 action = action_decorator.action
 
+
 class MtbfTestOptions(GaiaTestOptions):
     def __init__(self):
         GaiaTestOptions.__init__(self)
+
 
 class MtbfJobRunner(BaseActionRunner):
     serial = None
@@ -65,7 +67,7 @@ class MtbfJobRunner(BaseActionRunner):
             return False
         return True
 
-    @action(enabled=True)
+    @action(enabled=False)
     def add_7mobile_action(self):
         # workaround for waiting for boot
         self.data_layer.set_setting('ril.data.apnSettings',
@@ -92,7 +94,6 @@ class MtbfJobRunner(BaseActionRunner):
             mem_str = str(memory)
             os.system("fastboot oem mem " + mem_str)
             # Preventing from async timing of fastboot
-            time.sleep(5)
             os.system("fastboot reboot")
             self.port_forwarding(self.serial, self.port)
             return True
@@ -111,6 +112,10 @@ class MtbfJobRunner(BaseActionRunner):
             # Record device serial and store dp instance
             self.serial = str(dp)
             self.dp = dp
+            if self.is_forwarded(self.serial):
+                # device is forwarded before acquired; stop and avoid possible error
+                self.serial = None
+                raise DMError("Device already in forwarding list")
             os.environ["ANDROID_SERIAL"] = self.serial
             self.port = self.find_available_port()
             if self.port_forwarding(str(dp), self.port):
@@ -128,27 +133,32 @@ class MtbfJobRunner(BaseActionRunner):
         basedir = os.environ['FLASH_BASEDIR']
         if not 'FLASH_BUILDID' in os.environ:
         ## TODO: if latest/ exists, use latest as default
-            raise AttributeError("No FLASH_BUILDID set")
-        buildid = os.environ['FLASH_BUILDID']
-        # re-format build id based on pvt folder structure
-        if '-' in buildid:
-            buildid = buildid.replace("-", "")
-        year = buildid[:4]
-        month = buildid[4:6]
-        datetime = '-'.join([year, month] + [buildid[i + 6:i + 8] for i in range(0, len(buildid[6:]), 2)])
-        flash_dir = os.path.join(basedir, year, month, datetime)
+            logging.info("No build id set. search in base dir")
+            buildid = ""
+            flash_dir = basedir
+        else:
+            buildid = os.environ['FLASH_BUILDID']
+            # re-format build id based on pvt folder structure
+            if '-' in buildid:
+                buildid = buildid.replace("-", "")
+            year = buildid[:4]
+            month = buildid[4:6]
+            datetime = '-'.join([year, month] + [buildid[i + 6:i + 8] for i in range(0, len(buildid[6:]), 2)])
+            flash_dir = os.path.join(basedir, year, month, datetime)
         if not os.path.isdir(flash_dir):
             raise AttributeError("Flash  directory " + flash_dir + " not exist")
         flash_files = glob.glob(os.path.join(flash_dir, '*'))
         flash_src = {}
         for flash_file in flash_files:
-            if "b2g" in flash_file:
+            if os.path.isdir(flash_file):
+                continue
+            elif "b2g" in flash_file:
                 flash_src['gecko'] = flash_file
             elif "gaia" in flash_file:
                 flash_src['gaia'] = flash_file
             elif "symbol" in flash_file:
                 flash_src['symbol'] = flash_file
-            else:
+            elif "zip" in flash_file:
                 flash_src['image'] = flash_file
         return flash_src
 
@@ -203,8 +213,7 @@ class MtbfJobRunner(BaseActionRunner):
         self.flashed = True
         os.system("ANDROID_SERIAL=" + self.serial + " adb wait-for-device")
 
-
-    def port_forwarding(self, serial, port):
+    def is_forwarded(self, serial):
         out = subprocess.check_output(['/usr/bin/adb version'], shell=True)
         import re
         search = re.search('[0-9\.]+', out)
@@ -213,10 +222,18 @@ class MtbfJobRunner(BaseActionRunner):
             out = subprocess.check_output('/usr/bin/adb forward --list', shell=True)
             search_serial = re.search('\w+', out)
             if search_serial and search_serial.group(0) == serial:
-                # Use existing forwarded connection
-                self.port = int(re.search(' tcp:(\d+) ', out).group(1))
-                logger.info("Using existing port [" + str(self.port) + "]")
-                return True
+                logger.info("DeviceSerial[" + serial + "] forwarded")
+                return int(re.search(' tcp:(\d+) ', out).group(1))
+        else:
+            logger.info("adb forward --list not supported; recommend to upgrade 1.0.31 or newer version")
+        return None
+
+    def port_forwarding(self, serial, port):
+        has_port = self.is_forwarded(serial)
+        if has_port:
+            logger.info("Using existing port [" + str(self.port) + "]")
+            self.port = has_port
+            return True
         if serial and port:
             ret = os.system("ANDROID_SERIAL=" + serial + " adb forward tcp:" + str(port) + " tcp:2828")
             if ret != 0:
@@ -243,6 +260,11 @@ class MtbfJobRunner(BaseActionRunner):
     def release(self):
         if hasattr(self, 'dp') and self.dp:
             self.dp.release()
+            if self.serial:
+                port = self.is_forwarded(self.serial)
+                if port:
+                # Remove port forwarding
+                    ret = os.system("ADNDROID_SERIAL=" + self.serial + " adb forward --remove tcp:" + str(port))
             return True
         else:
             logger.warning("No device allocated")
@@ -304,7 +326,7 @@ class MtbfJobRunner(BaseActionRunner):
         if self.port:
             kwargs['address'] = "localhost:" + str(self.port)
         logger.info("Using address[localhost:" + str(self.port) + "]")
-        mtbf.main(marionette=self.marionette, testvars=self.options.testvars,**kwargs)
+        mtbf.main(marionette=self.marionette, testvars=self.options.testvars, **kwargs)
 
     def pre_flash(self):
         pass
