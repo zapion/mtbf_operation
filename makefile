@@ -66,7 +66,7 @@ update:
      git pull -u;
 
 b2g-flash-tool:
-	git clone https://github.com/zapion/B2G-flash-tool.git; \
+	git clone https://github.com/Mozilla-TWQA/B2G-flash-tool.git; \
 		mv B2G-flash-tool flash_tool; \
 		cp b2g_download.py flash_tool;
 
