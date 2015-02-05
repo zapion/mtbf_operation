@@ -13,7 +13,7 @@ utils: combo-runner virtual-env activate lib-install github-remove b2g-flash-too
 
 v2.1: mtbf-v2.1 utils
 
-vmaster: mtbf-vmaster utils
+vmaster: mtbf-vmaster utils custom-gaia
 
 downloader: b2g-flash-tool
 
@@ -22,6 +22,15 @@ ifneq ($(virtual-env-exists),exists)
 	@virtualenv ${mtbf-env}
 else
 	@echo "virtual environment exists." 
+endif
+
+custom-gaia:
+ifdef gaiatest
+	. ${mtbf-env}/bin/activate; \
+		cd ${gaiatest}; \
+		python setup.py install;
+else
+	echo use default gaiatest
 endif
 
 lib-install: virtual-env
