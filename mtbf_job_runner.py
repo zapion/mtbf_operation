@@ -57,7 +57,7 @@ class MtbfJobRunner(BaseActionRunner):
         self.marionette = Marionette(device_serial=self.serial, port=self.port)
         self.marionette.start_session()
         self.device = GaiaDevice(marionette=self.marionette, manager=self.dm)
-        self.device.restart_b2g()
+        #self.device.restart_b2g()
         self.apps = GaiaApps(self.marionette)
         self.data_layer = GaiaData(self.marionette)
 
@@ -163,7 +163,8 @@ class MtbfJobRunner(BaseActionRunner):
         return flash_src
 
     @action(enabled=True)
-    def full_flash(self, flash_src=[]):
+    def full_flash(self):
+        flash_src = self.validate_flash_params()
         if self.flashed:
             logger.warning("Flash performed; skip flashing")
             return True
@@ -193,7 +194,8 @@ class MtbfJobRunner(BaseActionRunner):
         self.flashed = True
 
     @action(enabled=False)
-    def shallow_flash(self, flash_src=[]):
+    def shallow_flash(self):
+        flash_src = self.validate_flash_params()
         if self.flashed:
             logger.warning("Flash performed; skip flashing")
             return True
@@ -253,7 +255,8 @@ class MtbfJobRunner(BaseActionRunner):
     @action(enabled=True)
     def enable_certified_apps_debug(self):
         if self.serial:
-            os.system("ANDROID_SERIAL=" + self.serial + "flash_tool/enable_certified_apps_for_devtools.sh && adb wait-for-device")
+            os.system("ANDROID_SERIAL=" + self.serial + " flash_tool/enable_certified_apps_for_devtools.sh && adb wait-for-device")
+            logger.debug("Successfully enabling certified apps for debugging")
             return True
         return False
 
@@ -332,9 +335,8 @@ class MtbfJobRunner(BaseActionRunner):
         pass
 
     def flash(self):
-        flash_args = self.validate_flash_params()
-        self.shallow_flash(flash_src=flash_args)
-        self.full_flash(flash_src=flash_args)
+        self.shallow_flash()
+        self.full_flash()
         # workaround for waiting for boot
 
     def post_flash(self):
