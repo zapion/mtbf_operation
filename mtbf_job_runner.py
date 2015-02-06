@@ -150,6 +150,7 @@ class MtbfJobRunner(BaseActionRunner):
         flash_files = glob.glob(os.path.join(flash_dir, '*'))
         flash_src = {}
         for flash_file in flash_files:
+            logger.debug("Flash source found: [" + flash_file + "]")
             if os.path.isdir(flash_file):
                 continue
             elif "b2g" in flash_file:
