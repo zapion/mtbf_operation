@@ -1,6 +1,9 @@
 mtbf_operation
 ==============
 To setup mtbf environment for lab testing.  It will help to pull dependencies, flashing and/or executing tests
+
+For MTBF specific problem, please refer to https://github.com/Mozilla-TWQA/MTBF-Driver
+
 Dependencies:
 * MTBF-Driver
 * combo-runner
@@ -9,10 +12,25 @@ Dependencies:
 
 Recommend to use flame
 
-Quick start:
-1. Pull this repo
-2. make vmaster
-3. run "MTBF_CONF=mtbf_config.json mtbf_job_runner.py --testvars={TESTVARS}"
+=== Quick start ===
+
+1. Clone this repo
+2. Run "make vmaster"
+3. Run "source mtbf-env/bin/activate" to enable virtual env
+4. Run "mtbf_job_runner.py --testvars={TESTVARS} --settings=task_template.json"
+
+Parameters:
+
+1. --settings:  Specify a json file to define which task should be enabled/disabled
+2. FLASH_bASEDIR  : system virable.  To specify directory for flashing; will only search for archives the same as files in pvt.
+3. FLASH_BUILDID  : in FLASH_BASEDIR, if directory structure is the same as pvtbuild, using build id for retrieving target build artifact.
+
+
+Customization:
+
+1. To install gaia-ui-test from different path, change by gaiatest={gaiatest_path}, e.g., "make vmaster gaiatest=gaia/tests/python/gaia-ui-test/"
+2. Install virtual environment to a specific path, use mtbf-env={venv_path}, same as #1
+
 
 
 TODO:
