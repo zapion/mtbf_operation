@@ -153,7 +153,7 @@ class MtbfJobRunner(BaseActionRunner):
             logger.debug("Flash source found: [" + flash_file + "]")
             if os.path.isdir(flash_file):
                 continue
-            elif "b2g" in flash_file:
+            elif "tar.gz" in flash_file:
                 flash_src['gecko'] = flash_file
             elif "gaia" in flash_file:
                 flash_src['gaia'] = flash_file
