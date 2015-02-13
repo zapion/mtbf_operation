@@ -17,6 +17,13 @@ vmaster: mtbf-vmaster utils custom-gaia
 
 downloader: b2g-flash-tool
 
+b2g-tool:
+	@git clone https://github.com/mozilla-b2g/B2G
+	@cp -r B2G/tools .
+	@rm -rf B2G
+	@touch tools/__init__.py
+
+
 virtual-env:
 ifneq ($(virtual-env-exists),exists)
 	@virtualenv ${mtbf-env}

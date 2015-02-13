@@ -8,6 +8,8 @@ mtbf-env/
 # MTBF
 *replay.txt
 screenshot
+output
+tools
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
