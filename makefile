@@ -28,9 +28,9 @@ custom-gaia:
 ifdef gaiatest
 	cp -r ${gaiatest} .
 	. ${mtbf-env}/bin/activate; \
-		cd ${gaiatest}; \
-		python setup.py install;
-	rm -rf $(basename ${gaiatest})
+	cd $(shell basename ${gaiatest}); \
+	python setup.py install; \
+	rm -rf $(shell basename ${gaiatest})
 else
 	echo use default gaiatest
 endif
