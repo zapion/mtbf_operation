@@ -10,6 +10,8 @@ mtbf-env/
 screenshot
 output
 tools
+conf
+runlist
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

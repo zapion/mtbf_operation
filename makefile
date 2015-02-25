@@ -9,7 +9,7 @@ setup-combo: combo-runner virtual-env activate
 delete-mtbf-env:
 	@rm -rf mtbf-env
 
-utils: combo-runner virtual-env activate lib-install github-remove b2g-flash-tool
+utils: combo-runner virtual-env activate lib-install github-remove b2g-flash-tool b2g-tool
 
 v2.1: mtbf-v2.1 utils custom-gaia
 
@@ -66,7 +66,9 @@ combo-runner:
 	@git clone https://github.com/zapion/combo-runner.git;
 
 mtbf-driver:
-	@git clone https://github.com/Mozilla-TWQA/MTBF-Driver.git;
+	@git clone https://github.com/Mozilla-TWQA/MTBF-Driver.git; \
+		cp -rf MTBF-Driver/mtbf_driver/conf .; \
+		cp -rf MTBF-Driver/mtbf_driver/runlist .;
 
 update: 
 	@cd MTBF-Driver; \
