@@ -2,7 +2,6 @@
 
 import os
 import sys
-import time
 import logging
 import subprocess
 import shutil
@@ -268,7 +267,7 @@ class MtbfJobRunner(BaseActionRunner):
                 port = self.is_forwarded(self.serial)
                 if port:
                 # Remove port forwarding
-                    ret = os.system("ADNDROID_SERIAL=" + self.serial + " adb forward --remove tcp:" + str(port))
+                    os.system("ADNDROID_SERIAL=" + self.serial + " adb forward --remove tcp:" + str(port))
             return True
         else:
             logger.warning("No device allocated")
@@ -320,17 +319,26 @@ class MtbfJobRunner(BaseActionRunner):
                     del sys.argv[idx]
                 break
 
+    @action(enabled=False)
+    def mtbf_daily(self):
+        pass
+
+    @action(enabled=True)
+    def run_mtbf(self):
+        mtbf.main(marionette=self.marionette, testvars=self.options.testvars, **self.kwargs)
+
     def execute(self):
         self.marionette.cleanup()
         self.marionette = Marionette(device_serial=self.serial, port=self.port)
         self.marionette.wait_for_port()
         # run test runner here
         self.remove_settings_opt()
-        kwargs = {}
+        self.kwargs = {}
         if self.port:
-            kwargs['address'] = "localhost:" + str(self.port)
+            self.kwargs['address'] = "localhost:" + str(self.port)
         logger.info("Using address[localhost:" + str(self.port) + "]")
-        mtbf.main(marionette=self.marionette, testvars=self.options.testvars, **kwargs)
+        mtbf_daily()
+        run_mtbf()
 
     def pre_flash(self):
         pass
