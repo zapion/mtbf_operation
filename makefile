@@ -68,6 +68,7 @@ combo-runner:
 mtbf-driver:
 	@git clone https://github.com/Mozilla-TWQA/MTBF-Driver.git; \
 		cp -rf MTBF-Driver/mtbf_driver/conf .; \
+		cp -rf MTBF-Driver/mtbf_driver/tests .; \
 		cp -rf MTBF-Driver/mtbf_driver/runlist .;
 
 update: 

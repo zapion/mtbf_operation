@@ -7,15 +7,17 @@ import subprocess
 import shutil
 import stat
 import glob
+import re
 import tempfile
 from combo_runner import action_decorator
 from sys import platform as _platform
 from combo_runner.base_action_runner import BaseActionRunner
 from marionette import Marionette
 import mozdevice
+from mozlog import structured
 from mozdevice.devicemanager import DMError
 from gaiatest import GaiaData, GaiaApps, GaiaDevice
-from gaiatest.runtests import GaiaTestOptions
+from gaiatest.runtests import GaiaTestOptions, GaiaTestRunner
 from utils import zip_utils
 from utils.device_pool import DevicePool
 from flash_tool.utilities.decompressor import Decompressor
@@ -56,7 +58,6 @@ class MtbfJobRunner(BaseActionRunner):
         self.marionette = Marionette(device_serial=self.serial, port=self.port)
         self.marionette.start_session()
         self.device = GaiaDevice(marionette=self.marionette, manager=self.dm)
-        #self.device.restart_b2g()
         self.apps = GaiaApps(self.marionette)
         self.data_layer = GaiaData(self.marionette)
 
@@ -217,7 +218,6 @@ class MtbfJobRunner(BaseActionRunner):
 
     def is_forwarded(self, serial):
         out = subprocess.check_output(['/usr/bin/adb version'], shell=True)
-        import re
         search = re.search('[0-9\.]+', out)
         os.system("ANDROID_SERIAL=" + self.serial + " adb wait-for-device")
         if search and search.group(0) >= '1.0.31':
@@ -321,7 +321,14 @@ class MtbfJobRunner(BaseActionRunner):
 
     @action(enabled=False)
     def mtbf_daily(self):
-        pass
+        parser = GaiaTestOptions()
+        structured.commandline.add_logging_group(parser)
+        options, tests = parser.parse_args(sys.argv[1:])
+        logger = structured.commandline.setup_logging(
+            options.logger_name, options, {"tbpl": sys.stdout})
+
+        runner = GaiaTestRunner(testvars=[self.options.testvars], logger=logger, **self.kwargs)
+        runner.run_tests(["tests"])
 
     @action(enabled=True)
     def run_mtbf(self):
@@ -337,8 +344,8 @@ class MtbfJobRunner(BaseActionRunner):
         if self.port:
             self.kwargs['address'] = "localhost:" + str(self.port)
         logger.info("Using address[localhost:" + str(self.port) + "]")
-        mtbf_daily()
-        run_mtbf()
+        self.mtbf_daily()
+        self.run_mtbf()
 
     def pre_flash(self):
         pass

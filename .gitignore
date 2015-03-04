@@ -12,6 +12,7 @@ output
 tools
 conf
 runlist
+tests
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
