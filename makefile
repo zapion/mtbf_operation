@@ -1,5 +1,5 @@
 # Pull all dependencies for mtbf runner
-#
+
 
 mtbf-env = mtbf-env
 virtual-env-exists = $(shell if [ -d "mtbf-env" ]; then echo "exists"; fi)
@@ -35,41 +35,16 @@ endif
 custom-gaia:
 ifdef gaiatest
 	cp -r ${gaiatest} .
-ifneq ($(virtual-env-entered),entered)
-	@. ${mtbf-env}/bin/activate; \
-	cd $(shell basename ${gaiatest}); \
-	python setup.py install; \
-	rm -rf $(shell basename ${gaiatest})
-else
-	cd $(shell basename ${gaiatest}); \
-	python setup.py install; \
-	rm -rf $(shell basename ${gaiatest})
-endif
+	$(shell if [ -z "$$VIRTUAL_ENV" ]; then . ./mtbf-env/bin/activate; fi; cd $(shell basename ${gaiatest});python setup.py install lockfile 1>&2 2> /dev/null;rm -rf $(shell basename ${gaiatest});)
 else
 	echo use default gaiatest
 endif
 
 lib-install: virtual-env
-ifneq ($(virtual-env-entered),entered)
-	@. ${mtbf-env}/bin/activate; \
-	pip install lockfile;
-else
-	pip install lockfile;
-endif
+	$(shell if [ -z "$$VIRTUAL_ENV" ]; then . ./mtbf-env/bin/activate; fi; pip install lockfile 1>&2 2> /dev/null;)
 
 activate: mtbf-driver virtual-env
-ifneq ($(virtual-env-entered),entered)
-	. ${mtbf-env}/bin/activate; \
-	cd MTBF-Driver; \
-        python setup.py install; \
-        cd ../combo-runner; \
-        python setup.py install;
-else
-	cd MTBF-Driver; \
-	python setup.py install; \
-	cd ../combo-runner; \
-	python setup.py install;
-endif
+	$(shell if [ -z "$$VIRTUAL_ENV" ]; then . ./mtbf-env/bin/activate; fi;  cd MTBF-Driver;python setup.py install 1>&2 2> /dev/null; cd ../combo-runner; python setup.py install 1>&2 2> /dev/null;)
 
 
 github-remove:
