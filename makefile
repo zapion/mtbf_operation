@@ -3,7 +3,6 @@
 
 mtbf-env = mtbf-env
 virtual-env-exists = $(shell if [ -d "mtbf-env" ]; then echo "exists"; fi)
-virtual-env-entered = $(shell if [ ! -z "$$VIRTUAL_ENV" ]; then echo "entered"; fi)
 
 setup-combo: combo-runner virtual-env activate
 
