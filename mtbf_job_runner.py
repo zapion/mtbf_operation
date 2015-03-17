@@ -60,6 +60,7 @@ class MtbfJobRunner(BaseActionRunner):
         self.device = GaiaDevice(marionette=self.marionette, manager=self.dm)
         self.apps = GaiaApps(self.marionette)
         self.data_layer = GaiaData(self.marionette)
+        self.device.wait_for_b2g_ready()
 
     def adb_test(self):
         if not hasattr(self, 'serial') or os.system("ANDROID_SERIAL=" + self.serial + " adb shell ls") != 0:
