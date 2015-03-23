@@ -73,8 +73,9 @@ update:
 
 b2g-flash-tool:
 	git clone https://github.com/Mozilla-TWQA/B2G-flash-tool.git; \
-		mv B2G-flash-tool flash_tool; \
-		cp b2g_download.py flash_tool;
+		cp -r B2G-flash-tool flash_tool; \
+		cp -f b2g_download.py flash_tool; \
+		rm -rf B2G-flash-tool;
 
 clean:
 	@rm -rf MTBF-Driver; rm -rf combo-runner; rm -rf B2G-flash-tool; rm -rf flash_tool; rm -rf ${mtbf-env}

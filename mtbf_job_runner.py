@@ -120,6 +120,7 @@ class MtbfJobRunner(BaseActionRunner):
             os.environ["ANDROID_SERIAL"] = self.serial
             self.port = self.find_available_port()
             if self.port_forwarding(str(dp), self.port):
+                logger.info("Device found, ANDROID_SERIAL= " + self.serial)
                 return dp
             logger.error("Port forwarding failed")
             raise DMError
