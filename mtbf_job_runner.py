@@ -325,12 +325,18 @@ class MtbfJobRunner(BaseActionRunner):
     @action(enabled=False)
     def mtbf_daily(self):
         parser = GaiaTestOptions()
+
+        opts = []
+        for k, v in self.kwargs.iteritems():
+            opts.append("--" + k)
+            opts.append(v)
+
+        options, tests = parser.parse_args(sys.argv[1:] + opts)
         structured.commandline.add_logging_group(parser)
-        options, tests = parser.parse_args(sys.argv[1:])
         logger = structured.commandline.setup_logging(
             options.logger_name, options, {"tbpl": sys.stdout})
-
-        runner = GaiaTestRunner(testvars=[self.options.testvars], logger=logger, **self.kwargs)
+        options.logger = logger
+        runner = GaiaTestRunner(**vars(options))
         runner.run_tests(["tests"])
 
     @action(enabled=True)
