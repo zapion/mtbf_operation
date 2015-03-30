@@ -336,6 +336,7 @@ class MtbfJobRunner(BaseActionRunner):
         logger = structured.commandline.setup_logging(
             options.logger_name, options, {"tbpl": sys.stdout})
         options.logger = logger
+        options.testvars = [self.options.testvars]
         runner = GaiaTestRunner(**vars(options))
         runner.run_tests(["tests"])
 
