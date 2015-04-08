@@ -13,12 +13,25 @@ class DevicePool(object):
     lock_folder = "/tmp/LOCKS"
     my_lock = None
     serial = None
+    current_lock_index = -1
 
     def __init__(self, deviceSerial=None):
+        self.devices = self._device_list()
         if deviceSerial:
             self.serial = deviceSerial
+            self._check_serial_in_devices()
         if not os.path.exists(self.lock_folder):
             os.makedirs(self.lock_folder)
+        self.lock_list = self._get_lock_list()
+
+    def _check_serial_in_devices(self):
+        if self.serial:
+            chk_list = filter(lambda x: x == self.serial, self.devices)
+            if not chk_list:
+                logger.warning("Android serial[" + self.serial + "] can't be found")
+                return False
+            else:
+                return True
 
     def _device_list(self):
         # adb devices here
@@ -32,6 +45,13 @@ class DevicePool(object):
                    filter(lambda x: 'lock' in x,
                           subprocess.check_output(['ls', self.lock_folder]).splitlines()))
 
+    def _get_lock_list(self):
+        lock_list = []
+        for device in self.devices:
+            lock_path = os.path.join(self.lock_folder, device)
+            lock_list.append(LockFile(lock_path))
+        return lock_list
+
     def __str__(self):
         if self.my_lock:
             return os.path.basename(self.my_lock.path).split('.')[0]
@@ -41,25 +61,30 @@ class DevicePool(object):
         if self.my_lock:
             return self.my_lock
         # TODO: acquire another lock to ensure critical section (?) test if it is necessary
-        devices = self._device_list()
-        if self.serial:
-            filter(lambda x: x == self.serial, devices)
-            if not device:
-                logger.warning("Android serial[" + self.serial + "] can't be found")
-        lock_list = []
-        for device in devices:
-            lock_path = os.path.join(self.lock_folder, device)
-            lock_list.append(LockFile(lock_path))
-
-        for lock in lock_list:
+        for index in range(len(self.lock_list)):
             try:
-                if not lock.i_am_locking():
-                    lock.acquire(timeout=60)
+                if not self.lock_list[index].i_am_locking():
+                    self.lock_list[index].acquire(timeout=60)
                     # successfully get lock, return lock.path
-                    self.my_lock = lock
-                    return lock.path
+                    self.my_lock = self.lock_list[index]
+                    self.current_lock_index = index
+                    return self.lock_list[index].path
             except:
                 # fail to get lock eventually, TODO: raise corresponding exception
+                logger.error("Failed to get lock!!")
+                pass
+        return None
+
+    def get_next_lock(self):
+        for next_index in range(self.current_lock_index + 1, len(self.lock_list)):
+            try:
+                if not self.lock_list[next_index].i_am_locking():
+                    self.lock_list[next_index].acquire(timeout=60)
+                    self.my_lock = self.lock_list[next_index]
+                    self.current_lock_index = next_index
+                    return self.lock_list[next_index].path
+            except:
+                logger.error("Failed to get lock!!")
                 pass
         return None
 
@@ -80,4 +105,3 @@ if __name__ == '__main__':
     dp.get_lock()
     dp._lock_list()
     dp.release()
-

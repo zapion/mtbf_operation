@@ -9,6 +9,7 @@ import stat
 import glob
 import re
 import tempfile
+import time
 from combo_runner import action_decorator
 from sys import platform as _platform
 from combo_runner.base_action_runner import BaseActionRunner
@@ -113,10 +114,19 @@ class MtbfJobRunner(BaseActionRunner):
             # Record device serial and store dp instance
             self.serial = str(dp)
             self.dp = dp
-            if self.is_forwarded(self.serial):
-                # device is forwarded before acquired; stop and avoid possible error
+            device_is_not_in_fowarded = False
+            for retry in range(3):
+                if self.is_forwarded(self.serial):
+                    # device is forwarded before acquired; stop and avoid possible error
+                    dp.get_next_lock()
+                    self.serial = str(dp)
+                else:
+                    device_is_not_in_fowarded = True
+                    break
+            if device_is_not_in_fowarded is False:
                 self.serial = None
                 raise DMError("Device already in forwarding list")
+
             os.environ["ANDROID_SERIAL"] = self.serial
             self.port = self.find_available_port()
             if self.port_forwarding(str(dp), self.port):
@@ -223,11 +233,12 @@ class MtbfJobRunner(BaseActionRunner):
         search = re.search('[0-9\.]+', out)
         os.system("ANDROID_SERIAL=" + self.serial + " adb wait-for-device")
         if search and search.group(0) >= '1.0.31':
-            out = subprocess.check_output('/usr/bin/adb forward --list', shell=True)
-            search_serial = re.search('\w+', out)
-            if search_serial and search_serial.group(0) == serial:
-                logger.info("DeviceSerial[" + serial + "] forwarded")
-                return int(re.search(' tcp:(\d+) ', out).group(1))
+            forward_list = subprocess.check_output('/usr/bin/adb forward --list', shell=True).splitlines()
+            for out in forward_list:
+                search_serial = re.search('\w+', out)
+                if search_serial and search_serial.group(0) == serial:
+                    logger.info("DeviceSerial[" + serial + "] forwarded")
+                    return int(re.search(' tcp:(\d+) ', out).group(1))
         else:
             logger.info("adb forward --list not supported; recommend to upgrade 1.0.31 or newer version")
         return None
