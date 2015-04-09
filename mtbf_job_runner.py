@@ -9,7 +9,7 @@ import stat
 import glob
 import re
 import tempfile
-import time
+import utils.crash_scan as CrashScan
 from combo_runner import action_decorator
 from sys import platform as _platform
 from combo_runner.base_action_runner import BaseActionRunner
@@ -335,12 +335,19 @@ class MtbfJobRunner(BaseActionRunner):
     @action(enabled=False)
     def mtbf_daily(self):
         parser = GaiaTestOptions()
+
+        opts = []
+        for k, v in self.kwargs.iteritems():
+            opts.append("--" + k)
+            opts.append(v)
+
+        options, tests = parser.parse_args(sys.argv[1:] + opts)
         structured.commandline.add_logging_group(parser)
-        options, tests = parser.parse_args(sys.argv[1:])
         logger = structured.commandline.setup_logging(
             options.logger_name, options, {"tbpl": sys.stdout})
-
-        runner = GaiaTestRunner(testvars=[self.options.testvars], logger=logger, **self.kwargs)
+        options.logger = logger
+        options.testvars = [self.options.testvars]
+        runner = GaiaTestRunner(**vars(options))
         runner.run_tests(["tests"])
 
     @action(enabled=True)
@@ -375,8 +382,18 @@ class MtbfJobRunner(BaseActionRunner):
         self.add_7mobile_action()
         self.enable_certified_apps_debug()
 
-    def collect_report(self):
-        pass
+    def output_crash_report_no_to_log(self, serial):
+        if serial in CrashScan.get_current_all_dev_serials():
+            crash_result = CrashScan.get_crash_no_by_serial(serial)
+            if crash_result['crashNo'] > 0:
+                logger.error("CrashReportFound: device " + serial + " has " + str(crash_result['crashNo']) + " crashes.")
+            else:
+                logger.info("CrashReportNotFound: No crash report found in device " + serial)
+        else:
+            logger.error("CrashReportAdbError: Can't find device in ADB list")
+
+    def collect_report(self, serial):
+        self.output_crash_report_no_to_log(serial)
 
     def run(self):
         try:
@@ -387,7 +404,7 @@ class MtbfJobRunner(BaseActionRunner):
                 self.port_forwarding(self.serial, self.port)
                 self.post_flash()
                 self.execute()
-                self.collect_report()
+                self.collect_report(self.serial)
         finally:
             self.release()
 
