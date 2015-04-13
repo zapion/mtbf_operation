@@ -9,9 +9,11 @@ setup-combo: combo-runner virtual-env activate
 delete-mtbf-env:
 	@rm -rf mtbf-env
 
-utils: combo-runner virtual-env activate lib-install github-remove b2g-flash-tool b2g-tool
+utils: get-branch combo-runner virtual-env activate lib-install github-remove b2g-flash-tool b2g-tool
 
 v2.1: mtbf-v2.1 utils custom-gaia
+
+v2.2: mtbf-v2.2 utils custom-gaia
 
 vmaster: mtbf-vmaster utils custom-gaia
 
@@ -38,6 +40,7 @@ ifdef gaiatest
 			 . ./mtbf-env/bin/activate;\
 	 	fi;\
 	 	cd $(shell basename ${gaiatest});\
+		git checkout -b ${branch} origin/${branch}; \
 	 	python setup.py install 1>&2 2> /dev/null;\
 	 	rm -rf $(shell basename ${gaiatest});)
 else
@@ -62,11 +65,17 @@ activate: mtbf-driver virtual-env
 github-remove:
 	@rm -rf MTBF-Driver combo-runner
 
+get-branch:
+	@cd MTBF-Driver && branch=$(git branch | grep "\*" | awk '{print $2}') && cd ..;
+
 mtbf-vmaster: mtbf-driver
-	@cd MTBF-Driver && git checkout master;
+	@cd MTBF-Driver;
+
+mtbf-v2.2: mtbf-driver
+	@cd MTBF-Driver && git checkout -b v2.2 origin/v2.2;
 
 mtbf-v2.1: mtbf-driver
-	@cd MTBF-Driver && git checkout v2.1;
+	@cd MTBF-Driver && git checkout -b v2.1 origin/v2.1;
 
 combo-runner:
 	@git clone https://github.com/zapion/combo-runner.git;
