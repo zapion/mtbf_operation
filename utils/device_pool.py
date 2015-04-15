@@ -4,12 +4,25 @@ import logging
 import subprocess
 import re
 import socket
+import traceback
 
 from mozdevice.devicemanager import DMError
 from lockfile import LockFile, NotLocked
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def exec_process(cmd_list):
+    proc = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = proc.communicate()[0]
+    if proc.stdin:
+        proc.stdin.close()
+    if proc.stdout:
+        proc.stdout.close()
+    if proc.stderr:
+        proc.stderr.close()
+    return output
 
 
 class DeviceObject(object):
@@ -49,7 +62,7 @@ class DeviceObject(object):
         return self.lock_file.i_am_locking()
 
     def is_in_forwarded_list(self):
-        out = subprocess.check_output(['/usr/bin/adb version'], shell=True)
+        out = exec_process(['/usr/bin/adb', 'version'])
         search = re.search('[0-9\.]+', out)
         os.system("ANDROID_SERIAL=" + self.serial + " adb wait-for-device")
         if search and search.group(0) >= '1.0.31':
@@ -63,11 +76,11 @@ class DeviceObject(object):
             return False
 
     def get_adb_forwarded_port(self):
-        out = subprocess.check_output(['/usr/bin/adb version'], shell=True)
+        out = exec_process(['/usr/bin/adb', 'version'])
         search = re.search('[0-9\.]+', out)
         os.system("ANDROID_SERIAL=" + self.serial + " adb wait-for-device")
         if search and search.group(0) >= '1.0.31':
-            forward_list = subprocess.check_output('/usr/bin/adb forward --list', shell=True).splitlines()
+            forward_list = exec_process(['/usr/bin/adb', 'forward', '--list']).splitlines()
             for out in forward_list:
                 search_serial = re.search('\w+', out)
                 if search_serial and search_serial.group(0) == self.serial:
@@ -135,7 +148,7 @@ class DevicePool(object):
 
     def _gen_serial_list(self):
         # adb devices here
-        tmp_list = subprocess.check_output(['adb', 'devices']).splitlines()
+        tmp_list = exec_process(['/usr/bin/adb', 'devices']).splitlines()
         tmp_list.pop(0)  # remove the description from adb
         serial_list = map(lambda x: x.split("\t")[0], filter(lambda x: x, tmp_list))
         return serial_list
@@ -152,7 +165,9 @@ class DevicePool(object):
                     logger.info("Get device with serial [" + serial_key + "]!")
                     return self.device_obj_map[serial_key]
             except:
-                # fail to get lock eventually, TODO: raise corresponding exception
+                # fail to get lock e
+                # ventually, TODO: raise corresponding exception
+                logger.error(traceback.format_exc())
                 logger.error("Failed to get lock!!")
                 pass
         logger.warning("No available device.  Please retry after device released")
