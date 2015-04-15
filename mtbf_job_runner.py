@@ -3,11 +3,9 @@
 import os
 import sys
 import logging
-import subprocess
 import shutil
 import stat
 import glob
-import re
 import tempfile
 import utils.crash_scan as CrashScan
 from combo_runner import action_decorator
@@ -97,11 +95,11 @@ class MtbfJobRunner(BaseActionRunner):
             os.system("fastboot oem mem " + mem_str)
             # Preventing from async timing of fastboot
             os.system("fastboot reboot")
-            self.port_forwarding(self.serial, self.port)
+            self.device_obj.create_adb_forward(self.port)
             return True
         logger.error("Can't find device")
         self.marionette.wait_for_port()
-        self.port_forwarding(self.serial, self.port)
+        self.device_obj.create_adb_forward(self.port)
         return False
 
     @action(enabled=True)
@@ -110,28 +108,16 @@ class MtbfJobRunner(BaseActionRunner):
 
     def get_free_device(self):
         dp = DevicePool(self.serial)
-        if dp and dp.get_lock():
+        self.dp = dp
+        do = dp.get_device()
+        if dp and do:
             # Record device serial and store dp instance
-            self.serial = str(dp)
-            self.dp = dp
-            device_is_not_in_fowarded = False
-            for retry in range(3):
-                if self.is_forwarded(self.serial):
-                    # device is forwarded before acquired; stop and avoid possible error
-                    dp.get_next_lock()
-                    self.serial = str(dp)
-                else:
-                    device_is_not_in_fowarded = True
-                    break
-            if device_is_not_in_fowarded is False:
-                self.serial = None
-                raise DMError("Device already in forwarding list")
-
-            os.environ["ANDROID_SERIAL"] = self.serial
-            self.port = self.find_available_port()
-            if self.port_forwarding(str(dp), self.port):
+            self.serial = do.serial
+            self.device_obj = do
+            if do.create_adb_forward():
+                self.port = do.adb_forwarded_port
                 logger.info("Device found, ANDROID_SERIAL= " + self.serial)
-                return dp
+                return do
             logger.error("Port forwarding failed")
             raise DMError
         logger.warning("No available device.  Please retry after device released")
@@ -228,43 +214,6 @@ class MtbfJobRunner(BaseActionRunner):
         self.flashed = True
         os.system("ANDROID_SERIAL=" + self.serial + " adb wait-for-device")
 
-    def is_forwarded(self, serial):
-        out = subprocess.check_output(['/usr/bin/adb version'], shell=True)
-        search = re.search('[0-9\.]+', out)
-        os.system("ANDROID_SERIAL=" + self.serial + " adb wait-for-device")
-        if search and search.group(0) >= '1.0.31':
-            forward_list = subprocess.check_output('/usr/bin/adb forward --list', shell=True).splitlines()
-            for out in forward_list:
-                search_serial = re.search('\w+', out)
-                if search_serial and search_serial.group(0) == serial:
-                    logger.info("DeviceSerial[" + serial + "] forwarded")
-                    return int(re.search(' tcp:(\d+) ', out).group(1))
-        else:
-            logger.info("adb forward --list not supported; recommend to upgrade 1.0.31 or newer version")
-        return None
-
-    def port_forwarding(self, serial, port):
-        has_port = self.is_forwarded(serial)
-        if has_port:
-            logger.info("Using existing port [" + str(self.port) + "]")
-            self.port = has_port
-            return True
-        if serial and port:
-            ret = os.system("ANDROID_SERIAL=" + serial + " adb forward tcp:" + str(port) + " tcp:2828")
-            if ret != 0:
-                raise DMError("can't forward port to ANDROID_SERIAL[" + serial + "]")
-        logger.info("Port forwarding success serial:[" + serial + "] port:[" + str(port) + "]")
-        return True
-
-    def find_available_port(self):
-        if 'ANDROID_SERIAL' in os.environ.keys():
-            import socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(('', 0))
-            port = sock.getsockname()[1]
-            sock.close()
-            return port
-
     @action(enabled=True)
     def enable_certified_apps_debug(self):
         if self.serial:
@@ -276,15 +225,6 @@ class MtbfJobRunner(BaseActionRunner):
     def release(self):
         if hasattr(self, 'dp') and self.dp:
             self.dp.release()
-            if self.serial:
-                port = self.is_forwarded(self.serial)
-                if port:
-                # Remove port forwarding
-                    os.system("ADNDROID_SERIAL=" + self.serial + " adb forward --remove tcp:" + str(port))
-            return True
-        else:
-            logger.warning("No device allocated")
-            return False
 
     def check_version(self):
         # FIXME: fix check version to use package import
@@ -401,7 +341,8 @@ class MtbfJobRunner(BaseActionRunner):
                 self.mtbf_options()
                 self.pre_flash()
                 self.flash()
-                self.port_forwarding(self.serial, self.port)
+                self.device_obj.create_adb_forward()
+                self.port = self.device_obj.adb_forwarded_port
                 self.post_flash()
                 self.execute()
                 self.collect_report(self.serial)
