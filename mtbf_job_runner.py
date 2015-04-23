@@ -8,6 +8,7 @@ import stat
 import glob
 import tempfile
 import utils.crash_scan as CrashScan
+import utils.device_pool as device_pool
 from combo_runner import action_decorator
 from sys import platform as _platform
 from combo_runner.base_action_runner import BaseActionRunner
@@ -18,7 +19,6 @@ from mozdevice.devicemanager import DMError
 from gaiatest import GaiaData, GaiaApps, GaiaDevice
 from gaiatest.runtests import GaiaTestOptions, GaiaTestRunner
 from utils import zip_utils
-from utils.device_pool import DevicePool
 from flash_tool.utilities.decompressor import Decompressor
 from flash_tool.utilities.logger import Logger
 from mtbf_driver import mtbf
@@ -107,10 +107,8 @@ class MtbfJobRunner(BaseActionRunner):
         zip_utils.collect_about_memory("mtbf_driver")  # TODO: give a correct path for about memory folder
 
     def get_free_device(self):
-        dp = DevicePool(self.serial)
-        self.dp = dp
-        do = dp.get_device()
-        if dp and do:
+        do = device_pool.get_device(self.serial)
+        if do:
             # Record device serial and store dp instance
             self.serial = do.serial
             self.device_obj = do
@@ -223,8 +221,7 @@ class MtbfJobRunner(BaseActionRunner):
         return False
 
     def release(self):
-        if hasattr(self, 'dp') and self.dp:
-            self.dp.release()
+        device_pool.release()
 
     def check_version(self):
         # FIXME: fix check version to use package import
