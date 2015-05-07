@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import re
 import sys
 import logging
 import shutil
@@ -149,13 +150,13 @@ class MtbfJobRunner(BaseActionRunner):
             logger.debug("Flash source found: [" + flash_file + "]")
             if os.path.isdir(flash_file):
                 continue
-            elif "tar.gz" in flash_file:
+            elif re.match("^b2g-[0-9]*.*.tar.gz$", flash_file):
                 flash_src['gecko'] = flash_file
-            elif "gaia" in flash_file:
+            elif "gaia.zip" == flash_file:
                 flash_src['gaia'] = flash_file
             elif "symbol" in flash_file:
                 flash_src['symbol'] = flash_file
-            elif "zip" in flash_file:
+            elif "zip" in flash_file and not ("gaia.zip" in flash_file):
                 flash_src['image'] = flash_file
         return flash_src
 
