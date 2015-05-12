@@ -231,6 +231,13 @@ class MtbfJobRunner(BaseActionRunner):
             cmd = "ANDROID_SERIAL=" + self.serial + " " + cmd
         os.system(cmd)
 
+    @action(enabled=False)
+    def patch_marionette(self):
+        os.system("M_PATH=/mnt/mtbf_shared/paul/ /mnt/mtbf_shared/paul/marionette_update.sh")
+        import time
+        time.sleep(10)
+        self.device_obj.create_adb_forward(self.port)
+
     def mtbf_options(self):
         ## load mtbf parameters
         if not 'MTBF_TIME' in os.environ:
@@ -319,6 +326,7 @@ class MtbfJobRunner(BaseActionRunner):
         self.change_memory()
         self.add_7mobile_action()
         self.enable_certified_apps_debug()
+        self.patch_marionette()
 
     def output_crash_report_no_to_log(self, serial):
         if serial in CrashScan.get_current_all_dev_serials():
