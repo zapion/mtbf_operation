@@ -15,6 +15,8 @@ v2.1: mtbf-v2.1 utils custom-gaia
 
 v2.2: mtbf-v2.2 utils custom-gaia
 
+v2.2-nexus-sleep: mtbf-v2.2-nexus-sleep utils custom-gaia
+
 vmaster: mtbf-vmaster utils custom-gaia
 
 downloader: b2g-flash-tool
@@ -70,6 +72,9 @@ get-branch:
 
 mtbf-vmaster: mtbf-driver
 	@cd MTBF-Driver;
+
+mtbf-v2.2-nexus-sleep: mtbf-driver
+	@cd MTBF-Driver && git checkout -b v2.2-nexus-sleep origin/v2.2-nexus-sleep;
 
 mtbf-v2.2: mtbf-driver
 	@cd MTBF-Driver && git checkout -b v2.2 origin/v2.2;
