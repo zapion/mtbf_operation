@@ -297,7 +297,7 @@ class MtbfJobRunner(BaseActionRunner):
 
     @action(enabled=True)
     def run_mtbf(self):
-        mtbf.main(marionette=self.marionette, testvars=self.options.testvars, **self.kwargs)
+        mtbf.main(testvars=self.options.testvars, **self.kwargs)
 
     def execute(self):
         self.marionette.cleanup()
