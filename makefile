@@ -71,7 +71,7 @@ get-branch:
 	@cd MTBF-Driver && branch=$(git branch | grep "\*" | awk '{print $2}') && cd ..;
 
 mtbf-vmaster: mtbf-driver
-	@cd MTBF-Driver;
+	@cd MTBF-Driver && git checkout master;
 
 mtbf-v2.2-nexus-sleep: mtbf-driver
 	@cd MTBF-Driver && git checkout -b v2.2-nexus-sleep origin/v2.2-nexus-sleep;
