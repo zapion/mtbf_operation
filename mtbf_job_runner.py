@@ -91,7 +91,7 @@ class MtbfJobRunner(BaseActionRunner):
         # Make sure it's in fastboot mode, TODO: leverage all fastboot command in one task function
         if self.adb_test():
             os.system("adb reboot bootloader")
-            memory = 319
+            memory = 512
             mem_str = str(memory)
             os.system("fastboot oem mem " + mem_str)
             # Preventing from async timing of fastboot
