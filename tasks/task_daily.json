@@ -1,9 +1,9 @@
 {
-"add_7mobile_action": true,
-"change_memory": false,
-"full_flash": true,
-"shallow_flash": false,
-"enable_certified_apps_debug": true,
-"run_mtbf": false,
-"mtbf_daily": true
+"add_7mobile_action": {"enabled": true},
+"change_memory": {"enabled": false},
+"full_flash": {"enabled": false},
+"shallow_flash": {"enabled": false},
+"enable_certified_apps_debug": {"enabled": true},
+"run_mtbf": {"enabled": false},
+"mtbf_daily": {"enabled": true}
 }
