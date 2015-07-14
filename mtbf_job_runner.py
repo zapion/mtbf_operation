@@ -87,8 +87,14 @@ class MtbfJobRunner(BaseActionRunner):
 
     @action(enabled=False)
     def change_memory(self):
-        #TODO: use native adb/fastboot command to change memory?
+        # This function only work in flame
+        # TODO: use native adb/fastboot command to change memory?
         # Make sure it's in fastboot mode, TODO: leverage all fastboot command in one task function
+        memory = 512 # default set 512
+        if 'MEM' in os.environ:
+            memory = os.environ['MEM']
+        elif self.settings['change_memory']['enabled'] and 'memory' in self.settings['change_memory']:
+            memory = self.settings['change_memory']['memory']
         if self.adb_test():
             os.system("adb reboot bootloader")
             memory = 512
