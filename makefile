@@ -83,7 +83,7 @@ mtbf-v2.1: mtbf-driver
 	@cd MTBF-Driver && git checkout -b v2.1 origin/v2.1;
 
 combo-runner:
-	@git clone https://github.com/zapion/combo-runner.git;
+	@git clone https://github.com/Mozilla-TWQA/combo-runner.git;
 
 mtbf-driver:
 	@git clone https://github.com/Mozilla-TWQA/MTBF-Driver.git; \
