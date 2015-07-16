@@ -5,6 +5,7 @@ import subprocess
 import re
 import socket
 import traceback
+from random import shuffle
 
 from mozdevice.devicemanager import DMError
 from lockfile import LockFile, NotLocked
@@ -125,6 +126,7 @@ def _gen_serial_list():
 
 def _gen_device_obj_map():
     obj_map = {}
+    shuffle(serial_list)
     for serial in serial_list:
         tmp_object = DeviceObject(serial)
         if serial in obj_map.keys():
