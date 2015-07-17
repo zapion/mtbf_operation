@@ -46,7 +46,7 @@ ifdef gaiatest
 	 	python setup.py install 1>&2 2> /dev/null;\
 	 	rm -rf $(shell basename ${gaiatest});)
 else
-	echo use default gaiatest
+	@echo use default gaiatest
 endif
 
 lib-install: virtual-env
