@@ -37,14 +37,16 @@ endif
 
 custom-gaia:
 ifdef gaiatest
-	cp -r ${gaiatest} .
-	$(shell if [ -z "$$VIRTUAL_ENV" ];then\
-			 . ./mtbf-env/bin/activate;\
-	 	fi;\
-	 	cd $(shell basename ${gaiatest});\
-		git checkout -b ${branch} origin/${branch}; \
-	 	python setup.py install 1>&2 2> /dev/null;\
-	 	rm -rf $(shell basename ${gaiatest});)
+	$(shell cp -rf ${gaiatest} .; \
+		cp -rf ${gaiatest}/../../atoms/* gaia-ui-tests/gaiatest/atoms/;\
+		cd ${gaiatest}; \
+		git checkout ${branch} >/dev/null 2>&1;)
+	$(shell if [ -z "$$VIRTUAL_ENV" ];\
+		then . ./mtbf-env/bin/activate;\
+		fi;\
+		cd gaia-ui-tests ;\
+		python setup.py install;\
+		rm -rf 'gaia-ui-tests';)
 else
 	@echo use default gaiatest
 endif
@@ -53,15 +55,15 @@ lib-install: virtual-env
 	$(shell if [ -z "$$VIRTUAL_ENV" ]; then\
 			 . ./mtbf-env/bin/activate;\
 		fi;\
-		pip install lockfile 1>&2 2> /dev/null;)
+		pip install lockfile  >/dev/null 2>&1;)
 
 activate: mtbf-driver virtual-env
 	$(shell if [ -z "$$VIRTUAL_ENV" ]; then\
 			 . ./mtbf-env/bin/activate;\
 		fi;\
-		cd MTBF-Driver;python setup.py install 1>&2 2> /dev/null;\
+		cd MTBF-Driver;python setup.py install >/dev/null 2>&1;\
 		cd ../combo-runner;\
-		python setup.py install 1>&2 2> /dev/null;)
+		python setup.py install >/dev/null 2>&1;)
 
 
 github-remove:
@@ -104,4 +106,4 @@ b2g-flash-tool:
 		rm -rf B2G-flash-tool;
 
 clean:
-	@rm -rf MTBF-Driver; rm -rf combo-runner; rm -rf B2G-flash-tool; rm -rf flash_tool; rm -rf ${mtbf-env}
+	@rm -rf MTBF-Driver; rm -rf combo-runner; rm -rf B2G-flash-tool; rm -rf flash_tool; rm -rf gaia-ui-tests; rm -rf build; rm -rf dist; rm -rf ${mtbf-env}
