@@ -1,0 +1,7 @@
+{
+"add_7mobile_action": {"enabled": true},
+"change_memory": {"enabled": false},
+"full_flash": {"enabled": true},
+"shallow_flash": {"enabled": false},
+"enable_certified_apps_debug": {"enabled": true}
+}
