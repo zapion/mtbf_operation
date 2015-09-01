@@ -1,0 +1,10 @@
+{
+"add_7mobile_action": {"enabled": true},
+"change_memory": {"enabled": false},
+"full_flash": {"enabled": false},
+"shallow_flash": {"enabled": false},
+"enable_certified_apps_debug": {"enabled": true},
+"run_mtbf": {"enabled": false},
+"mtbf_daily": {"enabled": false},
+"config_raptor": {"enabled": true, "config": "/tmp/test.json"}
+}
