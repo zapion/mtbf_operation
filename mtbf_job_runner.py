@@ -56,6 +56,7 @@ class MtbfJobRunner(BaseActionRunner):
         self.marionette and self.marionette.session and self.marionette.cleanup()
         self.dm = mozdevice.DeviceManagerADB(deviceSerial=self.serial, port=self.port)
         self.marionette = Marionette(device_serial=self.serial, port=self.port)
+        self.marionette.wait_for_port()
         self.marionette.start_session()
         self.device = GaiaDevice(marionette=self.marionette, manager=self.dm)
         self.apps = GaiaApps(self.marionette)
