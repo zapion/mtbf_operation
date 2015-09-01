@@ -106,4 +106,4 @@ b2g-flash-tool:
 		rm -rf B2G-flash-tool;
 
 clean:
-	@rm -rf MTBF-Driver; rm -rf combo-runner; rm -rf B2G-flash-tool; rm -rf flash_tool; rm -rf gaia-ui-tests; rm -rf ${mtbf-env}
+	@rm -rf build conf runlist dist MTBF-Driver combo-runner B2G-flash-tool tools flash_tool gaia-ui-tests ${mtbf-env}
