@@ -3,10 +3,12 @@
 import os
 import re
 import sys
+import time
 import logging
 import shutil
 import stat
 import glob
+import json
 import tempfile
 import utils.crash_scan as CrashScan
 import utils.device_pool as device_pool
@@ -28,6 +30,8 @@ logger = logging.getLogger("mtbf_operation")
 logging.basicConfig(level=logging.DEBUG)
 
 action = action_decorator.action
+# FIXME: hard coded path for demo only
+MonitorJobFolder = '/tmp/mtbf/'
 
 
 class MtbfTestOptions(GaiaTestOptions):
@@ -53,6 +57,8 @@ class MtbfJobRunner(BaseActionRunner):
         if not self.serial or not self.port:
             logger.error("Fail to get device")
             raise DMError
+        self.config_raptor()
+
         self.marionette and self.marionette.session and self.marionette.cleanup()
         self.dm = mozdevice.DeviceManagerADB(deviceSerial=self.serial, port=self.port)
         self.marionette = Marionette(device_serial=self.serial, port=self.port)
@@ -61,7 +67,8 @@ class MtbfJobRunner(BaseActionRunner):
         self.device = GaiaDevice(marionette=self.marionette, manager=self.dm)
         self.apps = GaiaApps(self.marionette)
         self.data_layer = GaiaData(self.marionette)
-        self.device.wait_for_b2g_ready()
+        if self.flashed:
+            self.device.wait_for_b2g_ready()
 
     def adb_test(self):
         if not hasattr(self, 'serial') or os.system("ANDROID_SERIAL=" + self.serial + " adb shell ls") != 0:
@@ -93,7 +100,7 @@ class MtbfJobRunner(BaseActionRunner):
         # This function only work in flame
         # TODO: use native adb/fastboot command to change memory?
         # Make sure it's in fastboot mode, TODO: leverage all fastboot command in one task function
-        memory = 512 # default set 512
+        memory = 512  # default set 512
         if 'MEM' in os.environ:
             memory = os.environ['MEM']
         elif self.settings['change_memory']['enabled'] and 'memory' in self.settings['change_memory']:
@@ -111,6 +118,14 @@ class MtbfJobRunner(BaseActionRunner):
         self.marionette.wait_for_port()
         self.device_obj.create_adb_forward(self.port)
         return False
+
+    @action(enabled=False)
+    def config_raptor(self):
+        settings = self.settings
+        if 'config_raptor' in settings and settings['config_raptor']['config']:
+            with open(settings['config_raptor']['config']) as conf:
+                self.raptor = json.load(conf)
+                self.raptor['path'] = settings['config_raptor']['config']
 
     @action(enabled=True)
     def collect_memory_report(self):
@@ -233,6 +248,33 @@ class MtbfJobRunner(BaseActionRunner):
     def release(self):
         device_pool.release()
 
+    def start_monitoring(self):
+        job = {'name': 'mtbf',
+               'type': 'TBD',
+               'serial': self.serial,
+               'job_info': {'pid': os.getpid(),
+                            'program': sys.argv[0],
+                            }
+               }
+        if hasattr(self, 'raptor'):
+            raptor = self.raptor
+            job['job_info'].update(self.raptor)
+        dirpath = MonitorJobFolder
+        if not os.path.isdir(dirpath):
+            os.makedirs(dirpath)
+        timestamp = time.strftime('%Y-%m-%d-%H-%M-%S+0000', time.gmtime())
+        filename = job['name'] + "_" + timestamp + ".json"
+        self.monitor_conf = os.path.join(dirpath, filename)
+        
+        job['job_info']['conf'] = self.monitor_conf
+
+        with open(self.monitor_conf, 'w') as fh:
+            fh.write(json.dumps(job, indent=2, sort_keys=True))
+
+    def stop_monitoring(self):
+        os.remove(self.monitor_conf)
+        self.monitor_conf = None
+
     def check_version(self):
         # FIXME: fix check version to use package import
         cmd = "cd flash_tool/ && NO_COLOR=TRUE ./check_versions.py | sed -e 's| \{2,\}||g' -e 's|\[0m||g'"
@@ -267,15 +309,6 @@ class MtbfJobRunner(BaseActionRunner):
                 logger.info("testvar [" + testvars + "] found")
             else:
                 raise AttributeError("testvars[" + testvars + "] doesn't exist")
-
-        ## #TODO: finish parsing arguments for flashing
-        ## parser.add_argument("--flashdir", help="directory for pulling build")
-        ## parser.add_argument("--buildid", help="build id for pulling build")
-        ## self.parse_options()
-        ## if hasattr(self.parser.option, 'flashdir'):
-        ##     os.environ['FLASH_BASEDIR'] = self.parser.option.flashdir
-        ## if hasattr(self.parser.option, 'buildid'):
-        ##     os.environ['FLASH_BUILDID'] = self.parser.option.buildid
 
     def remove_settings_opt(self):
         for e in sys.argv[1:]:
@@ -318,8 +351,10 @@ class MtbfJobRunner(BaseActionRunner):
         if self.port:
             self.kwargs['address'] = "localhost:" + str(self.port)
         logger.info("Using address[localhost:" + str(self.port) + "]")
+        self.start_monitoring()
         self.mtbf_daily()
         self.run_mtbf()
+        self.stop_monitoring()
 
     def pre_flash(self):
         pass

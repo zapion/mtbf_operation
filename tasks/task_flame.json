@@ -1,5 +1,5 @@
 {
-"add_7mobile_action": {"enabled": false},
+"add_7mobile_action": {"enabled": true},
 "change_memory": {"enabled": true, "memory": 512},
 "full_flash": {"enabled": true},
 "shallow_flash": {"enabled": false},
