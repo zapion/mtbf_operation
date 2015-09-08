@@ -45,6 +45,7 @@ ifdef gaiatest
 		then . ./mtbf-env/bin/activate;\
 	fi;\
 	cd gaia-ui-tests;\
+	python setup.py clean;\
 	python setup.py install;\
 	cd ..;\
 	rm -rf gaia-ui-tests
@@ -62,8 +63,11 @@ activate: mtbf-driver virtual-env
 	if [ -z "$$VIRTUAL_ENV" ]; then\
 		 . ./mtbf-env/bin/activate;\
 	fi;\
-	cd MTBF-Driver;python setup.py install;\
+	cd MTBF-Driver;\
+	python setup.py clean;\
+	python setup.py install;\
 	cd ../combo-runner;\
+	python setup.py clean;\
 	python setup.py install;
 
 github-remove:
