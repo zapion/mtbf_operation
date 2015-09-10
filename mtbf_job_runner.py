@@ -79,6 +79,7 @@ class MtbfJobRunner(BaseActionRunner):
     @action(enabled=False)
     def add_7mobile_action(self):
         # workaround for waiting for boot
+        self.marionette.wait_for_port()
         self.marionette.start_session()
         self.data_layer = GaiaData(self.marionette)
         self.data_layer.set_setting('ril.data.apnSettings',
