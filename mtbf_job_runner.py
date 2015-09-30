@@ -121,11 +121,7 @@ class MtbfJobRunner(BaseActionRunner):
     def config_raptor(self):
         settings = self.settings
         if 'config_raptor' in settings and settings['config_raptor']['config']:
-            with open(os.path.expandvars(settings['config_raptor']['config'])
-
-
-
-                      ) as conf:
+            with open(os.path.expandvars(settings['config_raptor']['config'])) as conf:
                 self.raptor = json.load(conf)
                 self.raptor['path'] = settings['config_raptor']['config']
                 self.raptor['monitorJobFolder'] = settings['config_raptor']['monitorJobFolder']
