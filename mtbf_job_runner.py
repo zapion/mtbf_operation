@@ -249,7 +249,7 @@ class MtbfJobRunner(BaseActionRunner):
 
     def start_monitoring(self):
         job = {'name': 'mtbf',
-               'type': 'moz_minions.crash_minion.kevin',
+               'type': 'moz_minions.kevin.MtbfToRaptorMinion',
                'serial': self.serial,
                'job_info': {'pid': os.getpid(),
                             'program': sys.argv[0],
