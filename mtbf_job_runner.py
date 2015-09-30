@@ -30,9 +30,6 @@ logger = logging.getLogger("mtbf_operation")
 logging.basicConfig(level=logging.DEBUG)
 
 action = action_decorator.action
-# FIXME: hard coded path for demo only
-MonitorJobFolder = '/tmp/mtbf/'
-
 
 class MtbfTestOptions(GaiaTestOptions):
     def __init__(self):
@@ -124,9 +121,14 @@ class MtbfJobRunner(BaseActionRunner):
     def config_raptor(self):
         settings = self.settings
         if 'config_raptor' in settings and settings['config_raptor']['config']:
-            with open(settings['config_raptor']['config']) as conf:
+            with open(os.path.expandvars(settings['config_raptor']['config'])
+
+
+
+                      ) as conf:
                 self.raptor = json.load(conf)
                 self.raptor['path'] = settings['config_raptor']['config']
+                self.raptor['monitorJobFolder'] = settings['config_raptor']['monitorJobFolder']
 
     @action(enabled=True)
     def collect_memory_report(self):
@@ -251,7 +253,7 @@ class MtbfJobRunner(BaseActionRunner):
 
     def start_monitoring(self):
         job = {'name': 'mtbf',
-               'type': 'TBD',
+               'type': 'moz_minions.crash_minion.CrashMinion',
                'serial': self.serial,
                'job_info': {'pid': os.getpid(),
                             'program': sys.argv[0],
@@ -260,17 +262,20 @@ class MtbfJobRunner(BaseActionRunner):
         if hasattr(self, 'raptor'):
             raptor = self.raptor
             job['job_info'].update(self.raptor)
-        dirpath = MonitorJobFolder
-        if not os.path.isdir(dirpath):
-            os.makedirs(dirpath)
-        timestamp = time.strftime('%Y-%m-%d-%H-%M-%S+0000', time.gmtime())
-        filename = job['name'] + "_" + timestamp + ".json"
-        self.monitor_conf = os.path.join(dirpath, filename)
-        
-        job['job_info']['conf'] = self.monitor_conf
+            if "monitorJobFolder" in self.raptor:
+                dirpath = os.path.expandvars(self.raptor['monitorJobFolder'])
+            else:
+                dirpath = "/tmp/mtbf"
+            if not os.path.isdir(dirpath):
+                os.makedirs(dirpath)
+            timestamp = time.strftime('%Y-%m-%d-%H-%M-%S+0000', time.gmtime())
+            filename = job['name'] + "_" + timestamp + ".json"
+            self.monitor_conf = os.path.join(dirpath, filename)
 
-        with open(self.monitor_conf, 'w') as fh:
-            fh.write(json.dumps(job, indent=2, sort_keys=True))
+            job['job_info']['conf'] = self.monitor_conf
+
+            with open(self.monitor_conf, 'w') as fh:
+                fh.write(json.dumps(job, indent=2, sort_keys=True))
 
     def stop_monitoring(self):
         os.remove(self.monitor_conf)
