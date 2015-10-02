@@ -3,5 +3,6 @@
 "change_memory": {"enabled": false},
 "full_flash": {"enabled": true},
 "shallow_flash": {"enabled": false},
-"enable_certified_apps_debug": {"enabled": true}
+"enable_certified_apps_debug": {"enabled": true},
+"config_raptor": {"enabled": true, "config": "$HOME/minions/raptor.json", "monitorJobFolder": "$HOME/minions/mtbf"}
 }
